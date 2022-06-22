@@ -192,7 +192,7 @@ void Subsampler::parse_fasta_test(const string& input_file) {
 	istream* input_stream = openFile(input_file);
 
 	std::unique_ptr< std::ostream > out_file_skmer = std::unique_ptr< std::ostream >(new zstr::ofstream("compressed_skmer.fa.gz"));
-	//ofstream out_file_skmer_big = ofstream("commpressed_skmer.fa");
+	ofstream out_file_skmer_big = ofstream("uncompressed_skmer.fa");
 	#pragma omp parallel num_threads(coreNumber)
 	{
 		string ref, useless;
@@ -331,7 +331,7 @@ void Subsampler::store_kmers(const string& input_file) {
 	istream* input_stream = openFile(input_file);
 
 	std::unique_ptr< std::ostream > out_file_kmer = std::unique_ptr< std::ostream >(new zstr::ofstream("compressed_kmer.fa.gz"));
-	ofstream out_file_kmer_big = ofstream("commpressed_kmer.fa");
+	ofstream out_file_kmer_big = ofstream("uncompressed_kmer.fa");
 	#pragma omp parallel num_threads(coreNumber)
 	{
 		string ref, useless;
@@ -448,10 +448,9 @@ void Subsampler::store_kmers(const string& input_file) {
 		out_file_kmer_big.write(tmp.c_str(), tmp.size());
 		for (auto& it : keys){
 			tmp = to_string(it) + " " + to_string(sketch[it].size()/2);
-			for(int i = 0; i <= sketch[it].size()-(k+1); i++){
-				cout << bool2strv(sketch[it]) << endl;
-				cin.get();
-				tmp += " " + bool2strv(sketch[it]).substr(i, i+k);
+			string tmpstr = bool2strv(sketch[it]);
+			for(int i = 0; i+k <= tmpstr.size(); i++){
+				tmp += " " + tmpstr.substr(i, i+k);
 			} 
 			tmp += "\n";
 			out_file_kmer->write(tmp.c_str(), tmp.size());
