@@ -261,10 +261,6 @@ void Subsampler::parse_fasta_test(const string& input_file) {
 									val = sketch.find(old_minimizer);
 									val->second.insert(val->second.end(), skmer.begin(), skmer.end());
 								}
-                                /*out_file_skmer<<">" + to_string(old_minimizer) + "\n" + ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2 //i - last_position + k) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2)-minimizer_size/2) + "\n";
-								for(int j = 0; j <= i - last_position; j++){
-									out_file_kmer << ">A\n" + ref.substr(last_position + j, k) + "\n";
-								}*/
 								
                                 selected_kmer_number+=(i - last_position + 1);
                                 selected_superkmer_number++;
@@ -306,11 +302,11 @@ void Subsampler::parse_fasta_test(const string& input_file) {
 		sort(keys.begin(), keys.end());
 		tmp = to_string(k-1+max_superkmer_size) + " " + to_string(minimizer_size) + "\n";
 		out_file_skmer->write(tmp.c_str(), tmp.size());
-		//out_file_skmer_big.write(tmp.c_str(), tmp.size());
+		out_file_skmer_big.write(tmp.c_str(), tmp.size());
 		for (auto& it : keys){
 			tmp = to_string(it) + " " + to_string(sketch[it].size()/2) + " " + bool2strv(sketch[it]) + "\n";
 			out_file_skmer->write(tmp.c_str(), tmp.size());
-			//out_file_skmer_big.write(tmp.c_str(), tmp.size());
+			out_file_skmer_big.write(tmp.c_str(), tmp.size());
 		}
 	}
 }
@@ -318,7 +314,7 @@ void Subsampler::parse_fasta_test(const string& input_file) {
 void Subsampler::store_kmers(const string& input_file) {
 	uint64_t total_nuc_number(0);
     uint64_t read_kmer(0);
-	string tmp;
+	string tmp, tmpstr;
 	double rate_to_apply = subsampling_rate;
 	if(estimated_subrate < subsampling_rate){
 		rate_to_apply = (double)subsampling_rate / estimated_subrate;
@@ -392,7 +388,7 @@ void Subsampler::store_kmers(const string& input_file) {
                         if((i - last_position + 1)==max_superkmer_size){
 							count_maximal_skmer++;
                             if(old_minimizer <= (double)minimizer_number/rate_to_apply){
-								vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+								vector<bool> skmer = str2boolv(ref.substr(last_position,i - last_position + k));
 								if(sketch.count(old_minimizer) == 0){
 									actual_minimizer_number++;
 									sketch.emplace(old_minimizer, skmer);
@@ -441,20 +437,21 @@ void Subsampler::store_kmers(const string& input_file) {
 		for (auto& it : sketch){
 			keys.push_back(it.first);
 		}
-
+		int cpttest = 0;
 		sort(keys.begin(), keys.end());
 		tmp = to_string(k-1+max_superkmer_size) + " " + to_string(minimizer_size) + "\n";
 		out_file_kmer->write(tmp.c_str(), tmp.size());
 		out_file_kmer_big.write(tmp.c_str(), tmp.size());
 		for (auto& it : keys){
-			tmp = to_string(it) + " " + to_string(sketch[it].size()/2);
-			string tmpstr = bool2strv(sketch[it]);
+			tmpstr = bool2strv(sketch[it]);
+			tmp = to_string(it) + " " + to_string(tmpstr.size());
 			for(int i = 0; i+k <= tmpstr.size(); i++){
-				tmp += " " + tmpstr.substr(i, i+k);
+				tmp += " " + tmpstr.substr(i, k);
 			} 
 			tmp += "\n";
 			out_file_kmer->write(tmp.c_str(), tmp.size());
 			out_file_kmer_big.write(tmp.c_str(), tmp.size());
+			tmp = tmpstr = "";
 		}
 	}
 }
@@ -463,9 +460,9 @@ int main(int argc, char** argv) {
 	char ch;
 	string input, inputfof, query;
 	uint k(31);
-	uint m1(10);
+	uint m1(8);
 	uint c(1);
-    uint64_t s(8); 
+    uint64_t s(10); 
 
 	while ((ch = getopt(argc, argv, "hdag:q:k:m:n:s:t:b:e:f:i:")) != -1) {
 		switch (ch) {
@@ -482,8 +479,8 @@ int main(int argc, char** argv) {
 		cout << "Core arguments:" << endl
 		     << "	-i input file" << endl
 		     << "	-k kmer size used  (31) " << endl
-             << "	-s subsampling used  (8) " << endl
-             << "	-m minimize size used  (10) " << endl;
+             << "	-s subsampling used  (10) " << endl
+             << "	-m minimize size used  (8) " << endl;
 		return 0;
 	}else{
         cout<<" I use k="<<k<<" m="<<m1<<" s="<<s<<endl;
