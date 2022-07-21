@@ -24,6 +24,7 @@
 
 kmer nuc2int(char c);
 kmer nuc2intrc(char c);
+void updateK(uint64_t& min, char nuc, uint64_t& k);
 void read_vector_bool(vector<bool>& V, zstr::ifstream* out, uint64_t n_bits);
 void dump_vector_bool(const vector<bool>& V, ostream* out);
 string intToString(uint64_t n);

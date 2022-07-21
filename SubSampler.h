@@ -48,7 +48,7 @@ class Subsampler {
         
     }
     void parse_fasta(const string& input_file);
-    void parse_fasta_test(const string& input_stream);
+    void parse_fasta_test(const string& input_file, const string& output_file);
     void updateK(uint64_t & min, char nuc);
 	void updateRCK(uint64_t& min, char nuc);
 	void updateM(uint64_t& min, char nuc);
@@ -56,7 +56,6 @@ class Subsampler {
     uint64_t regular_minimizer_pos(uint64_t seq, uint64_t& position);
     uint64_t canonize(uint64_t x, uint64_t n);
     void estimate_sub_rate(const string& input_file);
-    void compress_files(const string & file, const string& output_file);
     void store_kmers(const string& input_file);
 
 };

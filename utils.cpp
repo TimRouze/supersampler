@@ -518,3 +518,9 @@ string color_coverage2str(const vector<uint16_t>& V) {
 	}
 	return result;
 }
+
+void updateK(uint64_t& min, char nuc, uint64_t& k) {
+	min <<= 2;
+	min += nuc2int(nuc);
+	min %= (uint64_t)1<<(2*k);;
+}
