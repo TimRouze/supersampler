@@ -329,6 +329,7 @@ int main(int argc, char** argv) {
 	while ((ch = getopt(argc, argv, "hdag:q:k:m:n:s:t:b:e:f:i:o:")) != -1) {
 		switch (ch) {
 			case 'i': input = optarg; break;
+			case 'f': inputfof = optarg; break;
 			case 'k': k = stoi(optarg); break;
 			case 'm': m1 = stoi(optarg); break;
 			case 't': c = stoi(optarg); break;
@@ -338,10 +339,11 @@ int main(int argc, char** argv) {
 	}
 
 
-	if ((input == "" )) {
+	if ((input == "" && inputfof == "")) {
 		cout << "Core arguments:" << endl
 		     << "	-i input file" << endl
-			 << "	-o output file" << endl
+			 << "	-f input file of file" << endl
+			 << "	-o output file, if fof give output file of files name (.txt)" << endl
 		     << "	-k kmer size used  (31) " << endl
              << "	-s subsampling used  (10) " << endl
              << "	-m minimize size used  (8) " << endl;
@@ -350,23 +352,58 @@ int main(int argc, char** argv) {
         cout<<" I use k="<<k<<" m="<<m1<<" s="<<s<<endl;
         cout<<"Maximal super kmer are of length "<<2*k-m1<<" or "<<k-m1+1<<" kmers" <<endl;
         Subsampler ss(k,m1,s,c);
-		ss.estimate_sub_rate(input);
-        ss.parse_fasta_test(input, output);
-        cout<<"I have seen "<<intToString(ss.total_kmer_number)<<" kmers and I selected "<<intToString(ss.selected_kmer_number)<<" kmers"<<endl;
-        cout<<"This means a practical subsampling rate of "<<(double)ss.total_kmer_number/ss.selected_kmer_number<<endl;
-        cout<<"I have seen "<<intToString(ss.total_superkmer_number)<<" superkmers and I selected "<<intToString(ss.selected_superkmer_number)<<" superkmers"<<endl;
-        cout<<"This means a practical subsampling rate of "<<(double)ss.total_superkmer_number/ss.selected_superkmer_number<<endl;
-        cout<<"This means a mean superkmer size of "<<(double)ss.total_kmer_number/ss.total_superkmer_number<<" kmer per superkmer in the input"<<endl;
-        cout<<"This means a mean superkmer size of "<<(double)ss.selected_kmer_number/ss.selected_superkmer_number<<" kmer per superkmer in the output"<<endl;
-		
-		ofstream out_file_res = ofstream("metrics.txt", ios_base::app);
-		cout << "Optimal memory size of the output file should be: " << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << " kilo-octets." << endl;
-		//OUTPUT TO FIX
-		cout <<"Actual output file size is " << intToString(std::filesystem::file_size(output+".gz")/1000) << "KB" << endl;
-		out_file_res << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << "KB " << to_string(std::filesystem::file_size(output + ".gz")/1000) << "KB.\n";
-		cout << "Minimizer number: " << ss.actual_minimizer_number << " Skmer/minimizer: " << ss.selected_superkmer_number/ss.actual_minimizer_number << endl;
-		cout << "I have stored " << intToString(ss.selected_superkmer_number * (2*k-m1))<< " nucleotides in the output file containing the superkmers" << endl;
+		if(input != ""){
+			ss.estimate_sub_rate(input);
+			ss.parse_fasta_test(input, output);
+			cout<<"I have seen "<<intToString(ss.total_kmer_number)<<" kmers and I selected "<<intToString(ss.selected_kmer_number)<<" kmers"<<endl;
+			cout<<"This means a practical subsampling rate of "<<(double)ss.total_kmer_number/ss.selected_kmer_number<<endl;
+			cout<<"I have seen "<<intToString(ss.total_superkmer_number)<<" superkmers and I selected "<<intToString(ss.selected_superkmer_number)<<" superkmers"<<endl;
+			cout<<"This means a practical subsampling rate of "<<(double)ss.total_superkmer_number/ss.selected_superkmer_number<<endl;
+			cout<<"This means a mean superkmer size of "<<(double)ss.total_kmer_number/ss.total_superkmer_number<<" kmer per superkmer in the input"<<endl;
+			cout<<"This means a mean superkmer size of "<<(double)ss.selected_kmer_number/ss.selected_superkmer_number<<" kmer per superkmer in the output"<<endl;
+			
+			//ofstream out_file_res = ofstream("metrics.txt", ios_base::app);
+			cout << "Optimal memory size of the output file should be: " << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << " kilo-octets." << endl;
+			//OUTPUT TO FIX
+			cout <<"Actual output file size is " << intToString(std::filesystem::file_size(output+".gz")/1000) << "KB" << endl;
+			//out_file_res << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << "KB " << to_string(std::filesystem::file_size(output + ".gz")/1000) << "KB.\n";
+			cout << "Minimizer number: " << ss.actual_minimizer_number << " Skmer/minimizer: " << ss.selected_superkmer_number/ss.actual_minimizer_number << endl;
+			cout << "I have stored " << intToString(ss.selected_superkmer_number * (2*k-m1))<< " nucleotides in the output file containing the superkmers" << endl;
 
+		}else{
+			string output_filename, curr_filename;
+			istream* fof = openFile(inputfof);
+			int i(0);
+			ofstream out_fof = ofstream(output);
+			while(not fof ->eof()){
+        		Subsampler ss(k,m1,s,c);
+				getline(*fof, curr_filename);
+				if(curr_filename != ""){
+					output_filename = "subsampled_file_" + to_string(i) + ".fa";
+					ss.estimate_sub_rate(curr_filename);
+					ss.parse_fasta_test(curr_filename, output_filename);
+					out_fof << output_filename << ".gz\n";
+					i++;
+					cout<<"I have seen "<<intToString(ss.total_kmer_number)<<" kmers and I selected "<<intToString(ss.selected_kmer_number)<<" kmers"<<endl;
+					cout<<"This means a practical subsampling rate of "<<(double)ss.total_kmer_number/ss.selected_kmer_number<<endl;
+					cout<<"I have seen "<<intToString(ss.total_superkmer_number)<<" superkmers and I selected "<<intToString(ss.selected_superkmer_number)<<" superkmers"<<endl;
+					cout<<"This means a practical subsampling rate of "<<(double)ss.total_superkmer_number/ss.selected_superkmer_number<<endl;
+					cout<<"This means a mean superkmer size of "<<(double)ss.total_kmer_number/ss.total_superkmer_number<<" kmer per superkmer in the input"<<endl;
+					cout<<"This means a mean superkmer size of "<<(double)ss.selected_kmer_number/ss.selected_superkmer_number<<" kmer per superkmer in the output"<<endl;
+					
+					//ofstream out_file_res = ofstream("metrics.txt", ios_base::app);
+					cout << "Optimal memory size of the output file should be: " << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << " kilo-octets." << endl;
+					//OUTPUT TO FIX
+					cout <<"Actual output file size is " << intToString(std::filesystem::file_size(output_filename+".gz")/1000) << "KB" << endl;
+					//out_file_res << intToString((((4+4+84*(ss.selected_superkmer_number/ss.actual_minimizer_number))*ss.actual_minimizer_number)/8)/1000) << "KB " << to_string(std::filesystem::file_size(output + ".gz")/1000) << "KB.\n";
+					cout << "Minimizer number: " << ss.actual_minimizer_number << " Skmer/minimizer: " << ss.selected_superkmer_number/ss.actual_minimizer_number << endl;
+					cout << "I have stored " << intToString(ss.selected_superkmer_number * (2*k-m1))<< " nucleotides in the output file containing the superkmers" << endl;
+
+				}
+
+			}
+		}
+        
     }
 	    
 }
