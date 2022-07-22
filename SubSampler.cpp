@@ -83,7 +83,7 @@ uint64_t Subsampler::regular_minimizer_pos(uint64_t seq, uint64_t& position) {
     return revhash((uint64_t)mini) % minimizer_number;
 }
 
-void Subsampler::estimate_sub_rate(const string& input_file){
+/*void Subsampler::estimate_sub_rate(const string& input_file){
 	istream* input_stream = openFile(input_file);
 	uint64_t count_kmer_in_max_skmer(0), nb_kmer(0);
 	string ref, useless;
@@ -155,22 +155,13 @@ void Subsampler::estimate_sub_rate(const string& input_file){
 	}
 	cout << "total kmers seen: " << intToString(nb_kmer) << "\nkmers in max skmers: " << intToString(count_kmer_in_max_skmer) << endl;
 	estimated_subrate = (double)nb_kmer/count_kmer_in_max_skmer;
-}
+}*/
 
 void Subsampler::parse_fasta_test(const string& input_file, const string& output_file) {
 	uint64_t total_nuc_number(0);
     uint64_t read_kmer(0);
 	string tmp;
-	double rate_to_apply = subsampling_rate;
 	array<mutex, 1024> mutexArray;
-	if(estimated_subrate < subsampling_rate){
-		rate_to_apply = (double)subsampling_rate / estimated_subrate;
-		cout << "Base subsampling rate is: " << estimated_subrate << " there is still a rate of " << rate_to_apply << " to apply." << endl;
-	}
-	else{
-		cout << "Subsampling rate asked: " << subsampling_rate << " Base subsampling rate is: " << estimated_subrate << " when selecting only maximal superkmers." << endl;
-		rate_to_apply = (double)1;
-	}
 	istream* input_stream = openFile(input_file);
 
 	
@@ -241,42 +232,9 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 					// COMPUTE KMER MINIMIZER
 					if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
 						old_minimizer = (revhash(old_minimizer) % minimizer_number);
-                        if((i - last_position + 1)==max_superkmer_size){
-							#pragma omp atomic
-							count_maximal_skmer++;
-                            if(old_minimizer <= (double)minimizer_number/rate_to_apply){
-								vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
-								if(sketch[old_minimizer].empty()){
-									omp_set_lock(&(lock_Array[old_minimizer%1024]));
-									actual_minimizer_number++;
-									sketch[old_minimizer] = skmer;
-									omp_unset_lock(&(lock_Array[old_minimizer%1024]));
-								}else{
-									omp_set_lock(&(lock_Array[old_minimizer%1024]));
-									sketch[old_minimizer].insert(sketch[old_minimizer].end(), skmer.begin(), skmer.end());
-									omp_unset_lock(&(lock_Array[old_minimizer%1024]));
-								}
-								#pragma omp atomic
-                                selected_kmer_number+=(i - last_position + 1);
-								#pragma omp atomic
-                                selected_superkmer_number++;
-                            }
-							
-                        }
-						#pragma omp atomic
-						total_kmer_number += (i - last_position + 1);
-						#pragma omp atomic
-                        total_superkmer_number++;
-						last_position = i + 1;
-						old_minimizer = minimizer;
-					}
-				}
-				if (ref.size() - last_position > k - 1) {
-					old_minimizer = (revhash(old_minimizer) % minimizer_number);
-                    if((ref.size() - last_position + 1)==max_superkmer_size){
 						#pragma omp atomic
 						count_maximal_skmer++;
-                        if(old_minimizer <= (double)minimizer_number/rate_to_apply){
+						if(old_minimizer <= (double)minimizer_number/subsampling_rate){
 							vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
 							if(sketch[old_minimizer].empty()){
 								omp_set_lock(&(lock_Array[old_minimizer%1024]));
@@ -289,11 +247,39 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 								omp_unset_lock(&(lock_Array[old_minimizer%1024]));
 							}
 							#pragma omp atomic
-                            selected_kmer_number+=(ref.size() - last_position + 1);
+							selected_kmer_number+=(i - last_position + 1);
 							#pragma omp atomic
-                            selected_superkmer_number++;
-                        }
-                    }
+							selected_superkmer_number++;
+						}
+						#pragma omp atomic
+						total_kmer_number += (i - last_position + 1);
+						#pragma omp atomic
+                        total_superkmer_number++;
+						last_position = i + 1;
+						old_minimizer = minimizer;
+					}
+				}
+				if (ref.size() - last_position > k - 1) {
+					old_minimizer = (revhash(old_minimizer) % minimizer_number);
+					#pragma omp atomic
+					count_maximal_skmer++;
+					if(old_minimizer <= (double)minimizer_number/subsampling_rate){
+						vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+						if(sketch[old_minimizer].empty()){
+							omp_set_lock(&(lock_Array[old_minimizer%1024]));
+							actual_minimizer_number++;
+							sketch[old_minimizer] = skmer;
+							omp_unset_lock(&(lock_Array[old_minimizer%1024]));
+						}else{
+							omp_set_lock(&(lock_Array[old_minimizer%1024]));
+							sketch[old_minimizer].insert(sketch[old_minimizer].end(), skmer.begin(), skmer.end());
+							omp_unset_lock(&(lock_Array[old_minimizer%1024]));
+						}
+						#pragma omp atomic
+						selected_kmer_number+=(ref.size() - last_position + 1);
+						#pragma omp atomic
+						selected_superkmer_number++;
+					}
 					#pragma omp atomic
                     total_kmer_number += (ref.size() - last_position + 1);
 					#pragma omp atomic
@@ -353,7 +339,7 @@ int main(int argc, char** argv) {
         cout<<"Maximal super kmer are of length "<<2*k-m1<<" or "<<k-m1+1<<" kmers" <<endl;
         Subsampler ss(k,m1,s,c);
 		if(input != ""){
-			ss.estimate_sub_rate(input);
+			//ss.estimate_sub_rate(input);
 			ss.parse_fasta_test(input, output);
 			cout<<"I have seen "<<intToString(ss.total_kmer_number)<<" kmers and I selected "<<intToString(ss.selected_kmer_number)<<" kmers"<<endl;
 			cout<<"This means a practical subsampling rate of "<<(double)ss.total_kmer_number/ss.selected_kmer_number<<endl;
@@ -380,7 +366,7 @@ int main(int argc, char** argv) {
 				getline(*fof, curr_filename);
 				if(curr_filename != ""){
 					output_filename = "subsampled_file_" + to_string(i) + ".fa";
-					ss.estimate_sub_rate(curr_filename);
+					//ss.estimate_sub_rate(curr_filename);
 					ss.parse_fasta_test(curr_filename, output_filename);
 					out_fof << output_filename << ".gz\n";
 					i++;

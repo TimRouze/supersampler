@@ -58,7 +58,6 @@ void Comparator::compare_buckets(const string& fileofile){
 }
 
 void Comparator::skip_bucket(const vector<istream*>& files, vector<uint64_t> indices){
-    cout << "skip" << endl;
     robin_hood::unordered_map<uint64_t, uint64_t> color_map;
     string skip;
     for(auto ind : indices){
@@ -73,8 +72,11 @@ void Comparator::skip_bucket(const vector<istream*>& files, vector<uint64_t> ind
                 while((i + k)%skmerWoM_size != 1) {
                     if(color_map.count(seq) == 0){
                         nb_kmer_seen++;
-                        color_map[seq] = ((uint64_t)1 << ind);
+                        color_map[seq] = 1;
                     }
+                    updateK(seq, skip
+                    [i + k], k);
+                    i++;
                 }
             }
             nb_kmer_seen_infile[ind] += color_map.size();
