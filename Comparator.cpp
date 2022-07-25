@@ -79,7 +79,8 @@ void Comparator::skip_bucket(const vector<istream*>& files, vector<uint64_t> ind
                 }
                 i = i+k;
             }
-            //nb_kmer_seen_infile[ind] += skip_map.size();
+            nb_kmer_seen_infile[ind] += skip_map.size();
+            score_A[ind*files.size()+ind] += skip_map.size();
             skip_map.clear();
         }
     }
@@ -245,8 +246,6 @@ int main(int argc, char** argv) {
         for(int i = 0; i < comp.nb_files_eof-1; ++i){
             cout << "file "<< i << "\t[";
             for(int j = 0; j < comp.nb_files_eof-1; ++j){
-                cout << "\nScore is: " << intToString(comp.score_A[i*comp.nb_files_eof+j]) << " Nb k-mers seen in i: " 
-                << intToString(comp.nb_kmer_seen_infile[i]) << " Nb k-mers seen in j: " << intToString(comp.nb_kmer_seen_infile[j]) << endl; 
                 cout << (double)comp.score_A[i*comp.nb_files_eof+j]/max(comp.nb_kmer_seen_infile[i], comp.nb_kmer_seen_infile[j]) << "  ";
             }
             cout << "]" << endl;
