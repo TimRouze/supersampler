@@ -83,79 +83,6 @@ uint64_t Subsampler::regular_minimizer_pos(uint64_t seq, uint64_t& position) {
     return revhash((uint64_t)mini) % minimizer_number;
 }
 
-/*void Subsampler::estimate_sub_rate(const string& input_file){
-	istream* input_stream = openFile(input_file);
-	uint64_t count_kmer_in_max_skmer(0), nb_kmer(0);
-	string ref, useless;
-	uint32_t old_minimizer, minimizer;
-	uint32_t cpt(0);
-	while(not input_stream->eof()){
-		ref = useless = "";
-		getline(*input_stream, useless);
-		getline(*input_stream, ref);
-		if (ref.size() < k){
-			ref = "";
-		}
-		if(not ref.empty() and not useless.empty()){
-			old_minimizer = minimizer = minimizer_number;
-			uint64_t last_position(0);
-			uint64_t seq(str2num(ref.substr(0, k)));
-			uint64_t position_min;
-			uint64_t min_seq = (str2num(ref.substr(k - minimizer_size, minimizer_size))),
-			min_rcseq(rcbc(min_seq, minimizer_size)),
-			min_canon(min(min_seq, min_rcseq));
-			minimizer         = regular_minimizer_pos(seq, position_min);
-			old_minimizer     = minimizer;
-			uint64_t hash_min = unrevhash(minimizer);
-			uint64_t i(0);
-			for (; i + k < ref.size(); ++i) {
-				if(cpt >= 1000000){
-					cout << "total kmer seen: " << intToString(nb_kmer) << " kmers in max skmers: " << intToString(count_kmer_in_max_skmer) << endl;
-					estimated_subrate = (double)nb_kmer/count_kmer_in_max_skmer;
-					return;
-				}
-				updateK(seq, ref[i + k]);
-				updateM(min_seq, ref[i + k]);
-				updateRCM(min_rcseq, ref[i + k]);
-				min_canon      = (min(min_seq, min_rcseq));
-				uint64_t new_h = unrevhash(min_canon);
-				// THE NEW mmer is a MINIMIZor
-				if (new_h < hash_min) {
-					minimizer    = (min_canon);
-					hash_min     = new_h;
-					position_min = i + k - minimizer_size + 1;
-				} else {
-					// the previous minimizer is outdated
-					if (i >= position_min) {
-						minimizer = regular_minimizer_pos(seq, position_min);
-						hash_min  = unrevhash(minimizer);
-						position_min += (i + 1);
-					}
-				}
-				// COMPUTE KMER MINIMIZER
-				if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
-					old_minimizer = (revhash(old_minimizer) % minimizer_number);
-					if((i - last_position + 1)==max_superkmer_size){
-						count_kmer_in_max_skmer+= (i - last_position + 1);
-					}
-					nb_kmer += (i - last_position + 1);
-					last_position = i + 1;
-					old_minimizer = minimizer;
-					cpt = k+nb_kmer-1;
-				}
-			}
-			if (ref.size() - last_position > k - 1) {
-				old_minimizer = (revhash(old_minimizer) % minimizer_number);
-				if((ref.size() - last_position + 1)==max_superkmer_size){
-						count_kmer_in_max_skmer+= (i - last_position + 1);
-				}
-				nb_kmer += (i - last_position + 1);
-			}
-		}
-	}
-	cout << "total kmers seen: " << intToString(nb_kmer) << "\nkmers in max skmers: " << intToString(count_kmer_in_max_skmer) << endl;
-	estimated_subrate = (double)nb_kmer/count_kmer_in_max_skmer;
-}*/
 
 void Subsampler::parse_fasta_test(const string& input_file, const string& output_file) {
 	uint64_t total_nuc_number(0);
@@ -167,9 +94,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 	
 	std::unique_ptr< std::ostream > out_file_skmer = std::unique_ptr< std::ostream >(new zstr::ofstream(output_file + ".gz"));
 	ofstream out_file_skmer_big = ofstream(output_file);
-	//robin_hood::unordered_map<uint32_t, vector<bool>> sketch;
 	vector<bool>* sketch =  new vector<bool>[minimizer_number];
-	//robin_hood::unordered_map<uint32_t, vector<bool>>::iterator val;
 	
 	omp_lock_t lock_Array[1024];
 	for (uint64_t i = 0; i < 1024; i++) {
@@ -196,7 +121,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			}
 			// FOREACH UNITIG
 			if (not ref.empty() and not useless.empty()) {
-				uint64_t count_maximal_skmer(0);
+				uint64_t skmer_size(0);
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				uint64_t seq(str2num(ref.substr(0, k)));
@@ -232,8 +157,6 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 					// COMPUTE KMER MINIMIZER
 					if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
 						old_minimizer = (revhash(old_minimizer) % minimizer_number);
-						#pragma omp atomic
-						count_maximal_skmer++;
 						if(old_minimizer <= (double)minimizer_number/subsampling_rate){
 							vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
 							if(sketch[old_minimizer].empty()){
@@ -258,11 +181,12 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						last_position = i + 1;
 						old_minimizer = minimizer;
 					}
+					else{
+						skmer_size++;
+					}
 				}
 				if (ref.size() - last_position > k - 1) {
 					old_minimizer = (revhash(old_minimizer) % minimizer_number);
-					#pragma omp atomic
-					count_maximal_skmer++;
 					if(old_minimizer <= (double)minimizer_number/subsampling_rate){
 						vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
 						if(sketch[old_minimizer].empty()){
