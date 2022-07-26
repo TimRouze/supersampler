@@ -95,6 +95,8 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 	std::unique_ptr< std::ostream > out_file_skmer = std::unique_ptr< std::ostream >(new zstr::ofstream(output_file + ".gz"));
 	ofstream out_file_skmer_big = ofstream(output_file);
 	vector<bool>* sketch =  new vector<bool>[minimizer_number];
+	vector<uint64_t>* sizes = new vector<uint64_t>[minimizer_number];
+	vector<uint64_t>* positions = new vector<uint64_t>[minimizer_number];
 	
 	omp_lock_t lock_Array[1024];
 	for (uint64_t i = 0; i < 1024; i++) {
@@ -121,7 +123,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			}
 			// FOREACH UNITIG
 			if (not ref.empty() and not useless.empty()) {
-				uint64_t skmer_size(0);
+				uint64_t skmer_size(k), first_half(0);
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				uint64_t seq(str2num(ref.substr(0, k)));
@@ -158,15 +160,36 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 					if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
 						old_minimizer = (revhash(old_minimizer) % minimizer_number);
 						if(old_minimizer <= (double)minimizer_number/subsampling_rate){
-							vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+							// uint64_t curr_pos = last_position;
+							// cout << curr_pos << endl;
+							// cout << position_min << endl;
+							// cout << skmer_size << endl;
+							// cout << position_min+minimizer_size << endl;
+							// cout << position_min - last_position << endl;
+							// cout << skmer_size - ((position_min-last_position)-1+minimizer_size) << endl;
+							// cout << ref.substr(position_min+minimizer_size, skmer_size - ((position_min-last_position)-1+minimizer_size)) << "A" << endl;
+							// cin.get();
+							// first_half = ref.substr(last_position, position_min-last_position).size();
+							// second_half = ref.substr(position_min+minimizer_size, skmer_size - (position_min-last_position+minimizer_size));
+							// cout << first_half << endl;
+							// cin.get();
+							vector<bool> skmer = str2boolv(ref.substr(last_position, position_min-last_position-1) + ref.substr(position_min+minimizer_size-1, skmer_size - ((position_min-last_position)-1+minimizer_size))) ;
 							if(sketch[old_minimizer].empty()){
 								omp_set_lock(&(lock_Array[old_minimizer%1024]));
 								actual_minimizer_number++;
 								sketch[old_minimizer] = skmer;
+								sizes[old_minimizer] = {skmer_size};
+								positions[old_minimizer] = {position_min - last_position};
 								omp_unset_lock(&(lock_Array[old_minimizer%1024]));
 							}else{
 								omp_set_lock(&(lock_Array[old_minimizer%1024]));
 								sketch[old_minimizer].insert(sketch[old_minimizer].end(), skmer.begin(), skmer.end());
+								sizes[old_minimizer].push_back(skmer_size);
+								positions[old_minimizer].push_back(position_min - last_position);
+								// cout << bool2strv(skmer) << endl;
+								// cin.get();
+								//cout << sizes[old_minimizer] << endl;
+								//cout << positions[old_minimizer] << endl;
 								omp_unset_lock(&(lock_Array[old_minimizer%1024]));
 							}
 							#pragma omp atomic
@@ -180,6 +203,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
                         total_superkmer_number++;
 						last_position = i + 1;
 						old_minimizer = minimizer;
+						skmer_size = k;
 					}
 					else{
 						skmer_size++;
@@ -188,15 +212,25 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 				if (ref.size() - last_position > k - 1) {
 					old_minimizer = (revhash(old_minimizer) % minimizer_number);
 					if(old_minimizer <= (double)minimizer_number/subsampling_rate){
-						vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+						uint64_t curr_pos = last_position;
+						while(curr_pos <= position_min){
+							curr_pos++;
+						}
+						first_half = ref.substr(last_position, k + (curr_pos-last_position)).size();
+						vector<bool> skmer = str2boolv(ref.substr(last_position, k + (curr_pos-last_position)) + ref.substr(curr_pos + minimizer_size-1, skmer_size - first_half));
+						//str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
 						if(sketch[old_minimizer].empty()){
 							omp_set_lock(&(lock_Array[old_minimizer%1024]));
 							actual_minimizer_number++;
 							sketch[old_minimizer] = skmer;
+							sizes[old_minimizer] = {skmer_size};
+							positions[old_minimizer] = {position_min - last_position};
 							omp_unset_lock(&(lock_Array[old_minimizer%1024]));
 						}else{
 							omp_set_lock(&(lock_Array[old_minimizer%1024]));
 							sketch[old_minimizer].insert(sketch[old_minimizer].end(), skmer.begin(), skmer.end());
+							sizes[old_minimizer].push_back(skmer_size);
+							positions[old_minimizer].push_back(position_min - last_position);
 							omp_unset_lock(&(lock_Array[old_minimizer%1024]));
 						}
 						#pragma omp atomic
@@ -208,6 +242,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
                     total_kmer_number += (ref.size() - last_position + 1);
 					#pragma omp atomic
                     total_superkmer_number++;
+					skmer_size = k;
 				}
 			}
 		}
@@ -220,7 +255,15 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 		if(!sketch[i].empty()){
 				//cout << sizeof(sketch) << endl;
 				//cout << "coucou" << endl;
-			tmp = to_string(i) + " " + to_string(sketch[i].size()/2) + " " + bool2strv(sketch[i]) + "\n";
+			tmp = to_string(i) + " " + to_string(sizes[i].size()) + " sizes ";
+			for(auto elem : sizes[i]){
+				tmp += to_string(elem) + " ";
+			}
+			tmp += "positions ";
+			for(auto elem : positions[i]){
+				tmp += to_string(elem) + " ";
+			}
+			tmp += bool2strv(sketch[i]) + "\n";
 			out_file_skmer->write(tmp.c_str(), tmp.size());
 			//out_file_skmer_big.write(tmp.c_str(), tmp.size());
 		}
