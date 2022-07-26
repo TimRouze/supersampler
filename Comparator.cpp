@@ -243,17 +243,17 @@ int main(int argc, char** argv) {
         comp.compare_buckets(inputfof);
 
         cout << "Containement index: " << endl;
-        for(int i = 0; i < comp.nb_files_eof-1; ++i){
+        for(int i = 0; i < comp.nb_files_eof; ++i){
             cout << "file "<< i << "\t[";
-            for(int j = 0; j < comp.nb_files_eof-1; ++j){
+            for(int j = 0; j < comp.nb_files_eof; ++j){
                 cout << (double)comp.score_A[i*comp.nb_files_eof+j]/max(comp.nb_kmer_seen_infile[i], comp.nb_kmer_seen_infile[j]) << "  ";
             }
             cout << "]" << endl;
         }
         cout << "Jackard index:" << endl;
-        for(int i = 0; i < comp.nb_files_eof-1; ++i){
+        for(int i = 0; i < comp.nb_files_eof; ++i){
             cout << "file "<< i << "\t[";
-            for(int j = 0; j < comp.nb_files_eof-1; ++j){
+            for(int j = 0; j < comp.nb_files_eof; ++j){
                 cout << (double)comp.score_A[i*comp.nb_files_eof+j]/(comp.nb_kmer_seen_infile[i] + comp.nb_kmer_seen_infile[j] - comp.score_A[i*comp.nb_files_eof+j])<< "  ";
             }
             cout << "]" << endl;
