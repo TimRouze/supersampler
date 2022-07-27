@@ -16,7 +16,7 @@ class Comparator{
         uint32_t nb_kmer_seen;
         vector<uint64_t> minimizers, nb_kmer_seen_infile;
         bool run;
-        robin_hood::unordered_map<string, int> score_map;
+        uint64_t score_A[128] = {0};
         robin_hood::unordered_map<uint64_t, uint64_t> color_map;
         Comparator(){
             skmerWoM_size = m = nb_kmer_seen = nb_kmer_tot = k = nb_files_eof= 0;
@@ -30,6 +30,7 @@ class Comparator{
         void update_colormap(const vector<istream*>& files, vector<uint64_t> indices);
         void compare_buckets(const string& fileofile);
         void skip_bucket(const vector<istream*>& files, vector<uint64_t> indices);
+        void compute_scores(const vector<istream*>& files);
         //string find(istream* file2, uint32_t minimizer);
 
 };
