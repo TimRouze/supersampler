@@ -3,6 +3,7 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <iomanip>
 
 #include "include/robin_hood.h"
 
@@ -31,7 +32,9 @@ class Comparator{
         void compare_buckets(const string& fileofile);
         void skip_bucket(const vector<istream*>& files, vector<uint64_t> indices);
         void compute_scores(const vector<istream*>& files);
+        void updateRCK(uint64_t& min, char nuc);
         //string find(istream* file2, uint32_t minimizer);
 
 };
 string print_color(uint64_t c, int n);
+string kmer2str(uint64_t num, int l);

@@ -53,7 +53,7 @@ class Subsampler {
 	void updateRCK(uint64_t& min, char nuc);
 	void updateM(uint64_t& min, char nuc);
 	void updateRCM(uint64_t& min, char nuc);
-    uint64_t regular_minimizer_pos(uint64_t seq, uint64_t& position);
+    uint64_t regular_minimizer_pos(uint64_t seq, uint64_t& position, bool& is_rev);
     uint64_t canonize(uint64_t x, uint64_t n);
     void estimate_sub_rate(const string& input_file);
     void store_kmers(const string& input_file);

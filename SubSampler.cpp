@@ -63,20 +63,34 @@ uint64_t Subsampler::canonize(uint64_t x, uint64_t n) {
 }
 
 
-uint64_t Subsampler::regular_minimizer_pos(uint64_t seq, uint64_t& position) {
-	uint64_t mini, mmer;
+uint64_t Subsampler::regular_minimizer_pos(uint64_t seq, uint64_t& position, bool& is_rev) {
+	uint64_t mini, mmer, canon_mmer;
 	mmer = seq % minimizer_number;
-	mini = mmer        = canonize(mmer, minimizer_size);
+	mini        = canonize(mmer, minimizer_size);
+	if(mini == mmer){
+		is_rev = false;
+	}else{
+		is_rev = true;
+	}
+	mmer = mini;
 	uint64_t hash_mini = (unrevhash(mmer));
 	position           = 0;
 	for (uint64_t i(1); i <= k - minimizer_size; i++) {
+		bool local_rev;
 		seq >>= 2;
 		mmer          = seq % minimizer_number;
-		mmer          = canonize(mmer, minimizer_size);
+		canon_mmer          = canonize(mmer, minimizer_size);
+		if(canon_mmer == mmer){
+			local_rev = false;
+		}else{
+			local_rev = true;
+		}
+		mmer = canon_mmer;
 		uint64_t hash = (unrevhash(mmer));
 		if (hash_mini > hash) {
 			position  = k - minimizer_size - i;
 			mini      = mmer;
+			is_rev = local_rev;
 			hash_mini = hash;
 		}
 	}
@@ -98,13 +112,14 @@ void Subsampler::estimate_sub_rate(const string& input_file){
 		}
 		if(not ref.empty() and not useless.empty()){
 			old_minimizer = minimizer = minimizer_number;
+			bool is_rev;
 			uint64_t last_position(0);
 			uint64_t seq(str2num(ref.substr(0, k)));
 			uint64_t position_min;
 			uint64_t min_seq = (str2num(ref.substr(k - minimizer_size, minimizer_size))),
 			min_rcseq(rcbc(min_seq, minimizer_size)),
 			min_canon(min(min_seq, min_rcseq));
-			minimizer         = regular_minimizer_pos(seq, position_min);
+			minimizer         = regular_minimizer_pos(seq, position_min, is_rev);
 			old_minimizer     = minimizer;
 			uint64_t hash_min = unrevhash(minimizer);
 			uint64_t i(0);
@@ -127,7 +142,7 @@ void Subsampler::estimate_sub_rate(const string& input_file){
 				} else {
 					// the previous minimizer is outdated
 					if (i >= position_min) {
-						minimizer = regular_minimizer_pos(seq, position_min);
+						minimizer = regular_minimizer_pos(seq, position_min, is_rev);
 						hash_min  = unrevhash(minimizer);
 						position_min += (i + 1);
 					}
@@ -206,14 +221,15 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			// FOREACH UNITIG
 			if (not ref.empty() and not useless.empty()) {
 				uint64_t count_maximal_skmer(0);
+				bool is_rev, old_rev;
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				uint64_t seq(str2num(ref.substr(0, k)));
 				uint64_t position_min;
-				uint64_t min_seq = (str2num(ref.substr(k - minimizer_size, minimizer_size))),
+				uint64_t min_seq = (str2num(ref.substr(k-minimizer_size, minimizer_size))),
                 min_rcseq(rcbc(min_seq, minimizer_size)),
 				min_canon(min(min_seq, min_rcseq));
-				minimizer         = regular_minimizer_pos(seq, position_min);
+				minimizer         = regular_minimizer_pos(seq, position_min, old_rev);
 				old_minimizer     = minimizer;
 				uint64_t hash_min = unrevhash(minimizer);
 				uint64_t i(0);
@@ -229,23 +245,47 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						minimizer    = (min_canon);
 						hash_min     = new_h;
 						position_min = i + k - minimizer_size + 1;
+						if(min_canon == min_seq){
+							is_rev = false;
+						}else{
+							is_rev = true;
+						}
 					} else {
 						// the previous minimizer is outdated
 						if (i >= position_min) {
-							minimizer = regular_minimizer_pos(seq, position_min);
+							//c'est deja revhash dans regular_minimizer_pos
+							minimizer = regular_minimizer_pos(seq, position_min, is_rev);
 							hash_min  = unrevhash(minimizer);
 							position_min += (i + 1);
 						} else {
 						}
 					}
 					// COMPUTE KMER MINIMIZER
-					if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
+					// if (revhash(old_minimizer) % minimizer_number != revhash(minimizer) % minimizer_number) {
+					if(old_minimizer != minimizer){
 						old_minimizer = (revhash(old_minimizer) % minimizer_number);
+						//Le soucis c'est que j'ai pas la meme taille de skmer pour un minimizer donné entre deux séquences égales.
+						// if(old_minimizer == 1133){
+						// 	cout << "coucou" << endl;
+						// 	cout << old_minimizer << endl;
+						// 	cout << (i-last_position+1) << endl;
+						// }
+						// if(old_minimizer == 1648){
+						// 	cout << "coucou" << endl;
+						// 	cout << old_minimizer << endl;
+						// 	cout << (i-last_position+1) << endl;
+						// }
                         if((i - last_position + 1)==max_superkmer_size){
+							//cout << (i-last_position+1) << endl;
 							#pragma omp atomic
 							count_maximal_skmer++;
                             if(old_minimizer <= (double)minimizer_number/rate_to_apply){
-								vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+								vector<bool> skmer;
+								if(old_rev){
+									skmer = str2boolv(revComp(ref.substr(last_position+1, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2)));
+								}else{
+									skmer = str2boolv(ref.substr(last_position+1, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+								}
 								if(sketch[old_minimizer].empty()){
 									omp_set_lock(&(lock_Array[old_minimizer%1024]));
 									actual_minimizer_number++;
@@ -269,6 +309,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
                         total_superkmer_number++;
 						last_position = i + 1;
 						old_minimizer = minimizer;
+						old_rev = is_rev;
 					}
 				}
 				if (ref.size() - last_position > k - 1) {
@@ -277,7 +318,12 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						#pragma omp atomic
 						count_maximal_skmer++;
                         if(old_minimizer <= (double)minimizer_number/rate_to_apply){
-							vector<bool> skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+							vector<bool> skmer;
+							if(old_rev){
+								skmer = str2boolv(revComp(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2)));
+							}else{
+								skmer = str2boolv(ref.substr(last_position, ((2*k-minimizer_size)/2)-minimizer_size/2) + ref.substr(last_position + (((2*k-minimizer_size)/2)+minimizer_size/2), ((2*k-minimizer_size)/2) - minimizer_size/2));
+							}
 							if(sketch[old_minimizer].empty()){
 								omp_set_lock(&(lock_Array[old_minimizer%1024]));
 								actual_minimizer_number++;

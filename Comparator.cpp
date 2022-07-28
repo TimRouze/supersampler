@@ -30,7 +30,7 @@ void Comparator::compare_buckets(const string& fileofile){
         header.erase(0, header.find(" ") + 1);
         nb_kmer_tot = stoi(header);
         skmerWoM_size = skmer_size - m;
-        k = ((skmer_size + m)/2) - m;
+        k = ((skmer_size + m)/2)-m; //-m
         cout <<  " There are " << intToString(nb_kmer_tot) << " " << k+m << "-mers in total in file " << f << endl;
 
     }
@@ -60,24 +60,25 @@ void Comparator::compare_buckets(const string& fileofile){
 void Comparator::skip_bucket(const vector<istream*>& files, vector<uint64_t> indices){
     robin_hood::unordered_map<uint64_t, uint64_t> skip_map;
     string skip;
+    uint64_t curr_kmer, i;
     for(auto ind : indices){
         getline(*files[ind], skip);
         if (skip.size() < k) {
             skip = "";
         }
         if (not skip.empty()){
-            uint64_t seq(str2num(skip.substr(0, k)));
             uint64_t i(0);
-            while(i < skip.size()){
-                while((i + k)%skmerWoM_size != 1) {
-                    if(skip_map.count(seq) == 0){
-                        nb_kmer_seen++;
-                        skip_map[seq] = ((uint64_t)1 << ind);
+            while((i+k) < skip.size()){
+                curr_kmer = str2num(skip.substr(i, k));
+                while((i + k-1)%skmerWoM_size != 0) {
+                    if(skip_map.count(curr_kmer) == 0){
+                        // nb_kmer_seen++;
+                        skip_map[curr_kmer] = ((uint64_t)1 << ind);
                     }
-                    updateK(seq, skip[i + k], k);
+                    updateK(curr_kmer, skip[i + k], k);
                     i++;
                 }
-                i = i+k;
+                i = i+k-1;
             }
             nb_kmer_seen_infile[ind] += skip_map.size();
             score_A[ind*files.size()+ind] += skip_map.size();
@@ -86,32 +87,56 @@ void Comparator::skip_bucket(const vector<istream*>& files, vector<uint64_t> ind
     }
 }
 
+string kmer2str(uint64_t num, int l){
+	string res(l, '\0');
+	Pow2<kmer> anc(2 * (l - 1));
+	for (uint64_t i(0); i < l; ++i) {
+		uint64_t nuc = num / anc;
+		num          = num % anc;
+		assert(nuc < 4);
+		res[i] = "ACTG"[nuc];
+		anc >>= 2;
+	}
+	return res;
+}
+
 void Comparator::update_colormap(const vector<istream*>& files, vector<uint64_t> indices){
-    string ref;
+    string ref, kmer_canon;
+    uint64_t curr_kmer, i;
     for(auto ind : indices){
         getline(*files[ind], ref);
         if (ref.size() < k) {
             ref = "";
         }
         if (not ref.empty()){
-            uint64_t seq(str2num(ref.substr(0, k)));
-            uint64_t i(0);
-            while(i < ref.size()){
-                while((i + k)%skmerWoM_size != 1) {
-                    if(color_map.count(seq) == 0){
-                        color_map[seq] = ((uint64_t)1 << ind);
-                        nb_kmer_seen++;
+            i = 0;
+            while((i + k) < ref.size()){
+                curr_kmer = str2num(ref.substr(i, k));
+                //Quand la longueur du skmer est atteinte, on saute de k-1 nucleotide pour aller au skmer suivant.
+                while((i + k-1)%skmerWoM_size != 0) {
+                    // cout << "\n" << endl;
+                    // cout << ref << endl;
+                    // cout << ref.substr(i, k) << endl;
+                    // cout <<  "seq = " << kmer2str(seq, k) << endl;
+                    // cout << "rc = " << kmer2str(rc, k) << endl;
+                    // cout << "i = " << i << " file = " << ind << " k = " << k << endl; 
+                    // cout << "i + k = " << i+k << " i+k\%skmer_size = " << (i+k)%skmerWoM_size << endl;  
+                    // cout << "i + k - 1 = " << i+k-1 << endl;
+                    // cout << "count seq = " << color_map.count(seq) << " count rc = " << color_map.count(rc) << endl;
+                    // cin.get();
+                    
+                    if(color_map.count(curr_kmer) == 0){
+                        color_map[curr_kmer] = ((uint64_t)1 << ind);
+                        // nb_kmer_seen++;
                     }
                     else{
-                        color_map[seq] |= ((uint64_t)1 << ind);
+                        color_map[curr_kmer] |= ((uint64_t)1 << ind);
                     }
-                    updateK(seq, ref[i + k], k);
+                    updateK(curr_kmer, ref[i + k], k);
                     i++;
                 }
-                i = i+k;
+                i = i+k-1;
             }
-            //cout << "indice: " << ind << " nb kmers ajoutés: " << color_map.size() << endl;
-            //nb_kmer_seen_infile[ind] += color_map.size();
         }
     }
     compute_scores(files);
@@ -119,9 +144,14 @@ void Comparator::update_colormap(const vector<istream*>& files, vector<uint64_t>
 
 void Comparator::compute_scores(const vector<istream*>& files){
     string key = "";
+    //Vecteur de bool a la place
     vector<uint64_t> score_v;
     uint64_t tmp;
     for (auto it : color_map){
+        // cout << kmer2str(it.first, k) << endl;
+        // print_color(it.second, files.size());
+        // cout << endl;
+        // cin.get();
         score_v.clear();
         tmp = it.second;
         for(int i(0);i<files.size();++i){
@@ -169,10 +199,10 @@ void Comparator::increment_files(const vector<istream*>& files, vector<uint64_t>
                 }
             }
             else{
-                cout << minimizers << endl;
+                // cout << minimizers << endl;
                 minimizers[indices[i]] = -1;
                 nb_files_eof++;
-                cout << nb_files_eof << endl;
+                // cout << nb_files_eof << endl;
 
             }
         }
@@ -246,7 +276,7 @@ int main(int argc, char** argv) {
         for(int i = 0; i < comp.nb_files_eof; ++i){
             cout << "file "<< i << "\t[";
             for(int j = 0; j < comp.nb_files_eof; ++j){
-                cout << (double)comp.score_A[i*comp.nb_files_eof+j]/max(comp.nb_kmer_seen_infile[i], comp.nb_kmer_seen_infile[j]) << "  ";
+                cout << setprecision(3) << (double)comp.score_A[i*comp.nb_files_eof+j]/max(comp.nb_kmer_seen_infile[i], comp.nb_kmer_seen_infile[j]) << "  ";
             }
             cout << "]" << endl;
         }
@@ -254,11 +284,14 @@ int main(int argc, char** argv) {
         for(int i = 0; i < comp.nb_files_eof; ++i){
             cout << "file "<< i << "\t[";
             for(int j = 0; j < comp.nb_files_eof; ++j){
-                cout << (double)comp.score_A[i*comp.nb_files_eof+j]/(comp.nb_kmer_seen_infile[i] + comp.nb_kmer_seen_infile[j] - comp.score_A[i*comp.nb_files_eof+j])<< "  ";
+                // cout << "AUB = " << intToString((comp.nb_kmer_seen_infile[i] + comp.nb_kmer_seen_infile[j] - comp.score_A[i*comp.nb_files_eof+j])) << endl;
+                // cout << "ANB = " <<  intToString(comp.score_A[i*comp.nb_files_eof+j]) << endl;
+                // cin.get();
+                cout << setprecision(3) << (double)comp.score_A[i*comp.nb_files_eof+j]/(comp.nb_kmer_seen_infile[i] + comp.nb_kmer_seen_infile[j] - comp.score_A[i*comp.nb_files_eof+j])<< "  ";
             }
             cout << "]" << endl;
         }
-        cout << "for " << intToString(comp.nb_kmer_seen) << " kmers evaluated" << endl;
+        // cout << "for " << intToString(comp.nb_kmer_seen) << " kmers evaluated" << endl;
     }
 	    
 }
