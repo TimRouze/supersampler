@@ -77,8 +77,8 @@ class Subsampler {
 	void updateRCK(kmer& min, char nuc);
 	void updateM(uint64_t& min, char nuc);
 	void updateRCM(uint64_t& min, char nuc);
-    uint64_t regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev, bool& multiple_min);
-    void handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev, bool inputmultiple);
+    uint64_t regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev);
+    void handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev);
     void store_kmers(const string& input_file);
     uint64_t compute_threshold(double sampling_rate);
     void print_stat();

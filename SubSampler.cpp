@@ -87,8 +87,7 @@ uint64_t Subsampler::unrevhash(uint64_t x){
 
 
 
-uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev, bool& multiple_min) {
-	multiple_min=false;
+uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev) {
 	is_rev = false;
 	uint64_t mini, mmer, canon_mmer;
 	mmer = seq & offsetUpdateMinimizer;
@@ -116,9 +115,15 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 			mini      = mmer;
 			is_rev = local_rev;
 			hash_mini = hash;
-			multiple_min = false;
 		}else if(mmer == mini){
-			multiple_min=true;
+			if(local_rev != is_rev){
+				if(position > (k-minimizer_size - i)){
+					position  = k - minimizer_size - i;
+					mini      = mmer;
+					is_rev = local_rev;
+					hash_mini = hash;
+				}
+			}
 		}
 	}
     return mini;
@@ -168,13 +173,13 @@ string get_out_name(const string& str, const string& prefix){
 
 
 
-void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev, bool inputmultiple){
+void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev){
     selected_superkmer_number++;
 
     if(inputrev){
         superkmer=revComp(superkmer);
     }
-    if(inputmultiple && type == 3){
+    /*if(type == 3){
         //MULTIPLE MINIMIZER SUPERKMER
         string kmerstr;
         for(uint i(0);i+k<=superkmer.size();++i){
@@ -195,7 +200,7 @@ void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<boo
                 selected_kmer_number++;
 				cursed_kmer_number++;
         }
-    }else{
+    }else{*/
         selected_kmer_number+=superkmer.size()-k+1;
         if(superkmer.size()==2*k-minimizer_size){
             //Maximal SUPERKMER
@@ -208,7 +213,7 @@ void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<boo
             string skmerstr = superkmer.substr(0, p)+"\n"+superkmer.substr(p+minimizer_size)+"\n";
             sketch_max[input_minimizer].second+=skmerstr;
         }
-    }
+    //}
 }
 
 
@@ -252,7 +257,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			// FOREACH sequence
 			if (not ref.empty()) {
 				uint64_t skmer_size(0);
-				bool is_rev, old_rev,multiple_min,old_multiple_min;
+				bool is_rev, old_rev,multiple_min;
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				kmer seq(str2num(ref.substr(0, k)));
@@ -260,7 +265,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 				uint64_t min_seq = (str2num(ref.substr(k-minimizer_size, minimizer_size))),
                 min_rcseq(rcbc(min_seq, minimizer_size)),
 				min_canon(min(min_seq, min_rcseq));
-				minimizer         = regular_minimizer_pos(seq, position_min, old_rev,old_multiple_min);
+				minimizer         = regular_minimizer_pos(seq, position_min, old_rev);
 				old_minimizer     = minimizer;
 				uint64_t hash_min = unrevhash(minimizer);
 				uint64_t i(0);
@@ -283,14 +288,10 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						}else{
 							is_rev = true;
 						}
-					//MAX_SUPERKMER_SIZE != 1 -> PREVENTS SKMERS SIZES GREATER THAN MAX SKMER SIZE WHEN K = M
-					}else if (old_minimizer == min_canon && max_superkmer_size != 1){
-						// DUPLICATE MINIMIZER
-						old_multiple_min=true;
 					}else {
 						if (i >= position_min) {
 							// the previous minimizer is outdated
-							minimizer = regular_minimizer_pos(seq, position_min, is_rev, multiple_min);
+							minimizer = regular_minimizer_pos(seq, position_min, is_rev);
 							hash_min  = unrevhash(minimizer);
 							position_min += (i + 1);
 						}
@@ -316,7 +317,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 							}
 						//if(unrevhash(old_minimizer)%subsampling_rate == 0){
                             //THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-                            handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev,old_multiple_min);
+                            handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev);
 							pos_end = i + k - 1;
                         }
 						total_kmer_number += (i - last_position + 1);
@@ -324,7 +325,6 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						last_position = i + 1;
 						old_minimizer = minimizer;
 						old_rev = is_rev;
-                        old_multiple_min=multiple_min;
 						skmer_size = k;
 					}else{
 						skmer_size++;
@@ -336,7 +336,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						nb_mmer_selected -= minimizer_size - 1;
 					//if(unrevhash(old_minimizer)%subsampling_rate == 0){
                         //THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-						handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev,old_multiple_min);
+						handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev);
                         pos_end = i + k - 1;
 					}
                     total_kmer_number += (i - last_position + 1);
