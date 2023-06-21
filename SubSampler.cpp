@@ -98,11 +98,14 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 	mmer = mini;
 	uint64_t hash_mini = (unrevhash(mmer));
 	position = 0;
+	//For every m-mer in kmer
 	for (uint64_t i(1); i <= k - minimizer_size; i++) {
 		bool local_rev;
 		seq >>= 2;
 		mmer = seq & offsetUpdateMinimizer;
+		//Canonical m-mer
 		canon_mmer = canonize(mmer, minimizer_size);
+		//Check reading order (rc or forward)
 		if(canon_mmer == mmer){
 			local_rev = false;
 		}else{
@@ -110,13 +113,20 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 		}
 		mmer = canon_mmer;
 		uint64_t hash = (unrevhash(mmer));
+		//If current m-mer is smaller than current minimizer
+		//Replace previous by new minimizer
 		if (hash_mini > hash) {
 			position  = k - minimizer_size - i;
 			mini      = mmer;
 			is_rev = local_rev;
 			hash_mini = hash;
+		//If both current m-mer and current minimizer are equal
 		}else if(mmer == mini){
+			//If they are on different reading orders (one rc and one forward)
+			//If they are on the same reading order, we prioritise leftmost ones hence nothing to do
 			if(local_rev != is_rev){
+				//If current m-mer's position is more on the left than current minimizer
+				//Replace previous by current m-mer which becomes the minimizer.
 				if(position > (k-minimizer_size - i)){
 					position  = k - minimizer_size - i;
 					mini      = mmer;
@@ -173,57 +183,76 @@ string get_out_name(const string& str, const string& prefix){
 
 
 
-void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev){
+/*void Subsampler::handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev){
     selected_superkmer_number++;
 
     if(inputrev){
         superkmer=revComp(superkmer);
     }
-    /*if(type == 3){
-        //MULTIPLE MINIMIZER SUPERKMER
-        string kmerstr;
-        for(uint i(0);i+k<=superkmer.size();++i){
-            bool multiple;
-            kmerstr=superkmer.substr(i, k);
-            kmer seq(str2num(kmerstr));
-            uint64_t position_min;
-            kmer minimizer= regular_minimizer_pos(seq, position_min, inputrev,multiple);
+	selected_kmer_number+=superkmer.size()-k+1;
+	if(superkmer.size()==2*k-minimizer_size){
+		//Maximal SUPERKMER
+		vector<bool> skmer;
+		count_maximal_skmer++;
+		skmer = str2boolv(superkmer.substr(0, k-minimizer_size) + superkmer.substr(0 + k, k-minimizer_size));
+		sketch_max[input_minimizer].first.insert(sketch_max[input_minimizer].first.end(), skmer.begin(), skmer.end());
+	}else if(type != 1){
+		uint64_t p =superkmer.find(num2str(input_minimizer,minimizer_size));
+		string skmerstr = superkmer.substr(0, p)+"\n"+superkmer.substr(p+minimizer_size)+"\n";
+		sketch_max[input_minimizer].second+=skmerstr;
+	}
+}*/
 
-            //REGULAR KMER FOUND INSIDE MULTIPLE MINIMIZER SUPERKMER
-                uint64_t p =kmerstr.find(num2str(input_minimizer,minimizer_size));
-                if(p==string::npos){
-                    kmerstr=revComp(kmerstr);
-                    p =kmerstr.find(num2str(input_minimizer,minimizer_size));
-                }
-                kmerstr = kmerstr.substr(0, p)+"\n"+kmerstr.substr(p+minimizer_size)+"\n";
-                sketch_max[input_minimizer].second+=kmerstr;
-                selected_kmer_number++;
-				cursed_kmer_number++;
-        }
-    }else{*/
-        selected_kmer_number+=superkmer.size()-k+1;
-        if(superkmer.size()==2*k-minimizer_size){
-            //Maximal SUPERKMER
-            vector<bool> skmer;
-            count_maximal_skmer++;
-            skmer = str2boolv(superkmer.substr(0, k-minimizer_size) + superkmer.substr(0 + k, k-minimizer_size));
-            sketch_max[input_minimizer].first.insert(sketch_max[input_minimizer].first.end(), skmer.begin(), skmer.end());
-        }else if(type != 1){
-            uint64_t p =superkmer.find(num2str(input_minimizer,minimizer_size));
-            string skmerstr = superkmer.substr(0, p)+"\n"+superkmer.substr(p+minimizer_size)+"\n";
-            sketch_max[input_minimizer].second+=skmerstr;
-        }
-    //}
+
+void Subsampler::handle_superkmer(string& superkmer,ankerl::unordered_dense::map<uint32_t, ankerl::unordered_dense::map<uint64_t, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev){
+	//cout << "handling skmer" << endl;
+	selected_superkmer_number++;
+    if(inputrev){
+        superkmer=revComp(superkmer);
+    }
+	selected_kmer_number+=superkmer.size()-k+1;
+	string kmerstr;
+	if(superkmer.size()==2*k-minimizer_size){
+		//Maximal SUPERKMER
+		count_maximal_skmer++;
+	}
+	uint8_t i(0);
+	kmer seq(0);
+	uint64_t position_min(0);
+	for(;i+k<=superkmer.size();++i){
+		kmerstr=superkmer.substr(i, k);
+		position_min = kmerstr.find(num2str(input_minimizer, minimizer_size));
+		kmer seq(str2num(kmerstr));
+		if(minimizer_map.count(input_minimizer)){
+			if(minimizer_map[input_minimizer].count(seq)){
+				minimizer_map[input_minimizer][seq].count++;
+			}else{
+				kmer_info new_kmer;
+				new_kmer.count = 1;
+				new_kmer.pos_min = position_min;
+				minimizer_map[input_minimizer][seq] = new_kmer;
+				//selected_kmer_number++;
+			}
+		}else{
+			//selected_kmer_number++;
+			kmer_info new_kmer;
+			new_kmer.count = 1;
+			new_kmer.pos_min = position_min;
+			new_kmer.seen = false;
+			ankerl::unordered_dense::map<uint64_t, kmer_info> tmp;
+			tmp[seq] = new_kmer;
+			minimizer_map[input_minimizer] = tmp;
+		}
+	}
 }
 
-
-
-// RENAME
+//TODO CHANGE MAP TO https://github.com/martinus/unordered_dense.
+//CHECK FOR RC
+// RENAME IN SUBSAMPLE ?
 void Subsampler::parse_fasta_test(const string& input_file, const string& output_prefix) {
     total_kmer_number=actual_minimizer_number=total_superkmer_number=selected_kmer_number=selected_superkmer_number=count_maximal_skmer=0;
     uint64_t read_kmer(0);
 	string tmp;
-	array<mutex, 1024> mutexArray;
 	zstr::ifstream* input_stream = openFile(input_file);
     if(input_stream==NULL){
         cout<<"Can't open file: "<<input_file<<endl;
@@ -237,7 +266,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
     //subsampled_file=output_prefix +clean_input_file+".gz";
 	subsampled_file = get_out_name(input_file, output_prefix)+".gz";
 	zstr::ofstream* out_file_skmer = (new zstr::ofstream(subsampled_file,21,9));
-	map<uint32_t,pair<vector<bool>,string>> sketch_max;
+	ankerl::unordered_dense::map<uint32_t, ankerl::unordered_dense::map<uint64_t, kmer_info>> minimizer_map;
 	nb_mmer_selected = 0;
 	{
 		string ref, useless,superstr,skmerstr;
@@ -257,7 +286,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			// FOREACH sequence
 			if (not ref.empty()) {
 				uint64_t skmer_size(0);
-				bool is_rev, old_rev,multiple_min;
+				bool is_rev, old_rev;
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				kmer seq(str2num(ref.substr(0, k)));
@@ -280,7 +309,6 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 					if (new_h < hash_min) {
 						// THE NEW mmer is a MINIMIZER
 						minimizer    = min_canon;
-						multiple_min=false;
 						hash_min     = new_h;
 						position_min = i + k - minimizer_size + 1;
 						if(min_canon == min_seq){
@@ -317,7 +345,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 							}
 						//if(unrevhash(old_minimizer)%subsampling_rate == 0){
                             //THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-                            handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev);
+                            handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),minimizer_map,old_minimizer,old_rev);
 							pos_end = i + k - 1;
                         }
 						total_kmer_number += (i - last_position + 1);
@@ -336,7 +364,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 						nb_mmer_selected -= minimizer_size - 1;
 					//if(unrevhash(old_minimizer)%subsampling_rate == 0){
                         //THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-						handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),sketch_max,old_minimizer,old_rev);
+						handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),minimizer_map,old_minimizer,old_rev);
                         pos_end = i + k - 1;
 					}
                     total_kmer_number += (i - last_position + 1);
@@ -349,24 +377,154 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 	nb_mmer_selected -= minimizer_size-1;
 	tmp = to_string(k-1+max_superkmer_size) + " " + to_string(minimizer_size) + " " + to_string(selected_kmer_number) + " " + to_string(subsampling_rate) + "\n";
 	out_file_skmer->write(tmp.c_str(), tmp.size());
-	//HERE i is the bucket number
-	for(auto const& [i,val]: sketch_max){
-		string minstr=num2str(i,minimizer_size);
+	ankerl::unordered_dense::map<uint64_t, kmer_info>::iterator iter;
+	kmer start;
+	string to_write, skmer_str, compressed;
+	for (auto &minimizer : minimizer_map){
+		string minstr = num2str(minimizer.first, minimizer_size);
 		out_file_skmer->write(minstr.c_str(), minimizer_size);
-		string compressed(strCompressor(bool2strv(val.first)));
-        uint32_t size_compressed(compressed.size());//TODO RISKY 16bit int
-		out_file_skmer->write((const char*)&size_compressed, sizeof(size_compressed));
-		out_file_skmer->write(compressed.c_str(), compressed.size());
-        out_file_skmer->write(val.second.c_str(), val.second.size());
+		uint64_t i(0);
+		while(i <= minimizer.second.size()){
+			start = find_first_kmer(minimizer.second);
+			if(start == -1){
+				break;
+			}
+			skmer_str = reconstruct_superkmer(minimizer.second, start, minstr);
+			//cout << "skmer = " << skmer_str << endl;
+			//cout << "size = " << skmer_str.size() << endl;
+			if(skmer_str.size() == (k*2-minimizer_size)){
+				i += (k-minimizer_size+1);
+				//cout << "max skmer" << endl;
+				compressed = strCompressor(skmer_str.substr(0, k-minimizer_size) + skmer_str.substr(0 + k, k-minimizer_size));
+				uint32_t size_compressed(compressed.size());//TODO RISKY 16bit int
+				out_file_skmer->write((const char*)&size_compressed, sizeof(size_compressed));
+				out_file_skmer->write(compressed.c_str(), compressed.size());
+			}else{
+				i += (skmer_str.size()-k+1);
+				uint64_t p = skmer_str.find(minstr);
+				to_write = skmer_str.substr(0, p)+"\n"+skmer_str.substr(p+minimizer_size)+"\n";
+				out_file_skmer->write(to_write.c_str(), to_write.size());
+			}
+			
+		}
 		out_file_skmer->write("\n\n", 2);
-
 	}
-    actual_minimizer_number=sketch_max.size();
+    actual_minimizer_number=minimizer_map.size();
 	delete input_stream;
     delete out_file_skmer;
 }
 
+string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map, kmer& start, string& curr_min){
+	string result_skmer;
+	string superkmer = num2str(start, k);
+	uint64_t n_left((k-minimizer_size) - kmer_map[start].pos_min), n_right(kmer_map[start].pos_min);
+	kmer next;
+	kmer n_start = start;
+	while(superkmer.size() != (k*2-minimizer_size)){
+		if(n_left != 0){
+			//cout << "wesh" << endl;
+			next = find_next(n_start, kmer_map, true);
+			n_left -= 1;
+			if(next != n_start){
+				char new_n = next&3;
+				superkmer.insert(0, num2str(new_n, 1));
+			}else{
+				n_left = 0;
+			}
+			if(n_left == 0){
+				n_start = start;
+			}else{
+				n_start = next;
+			}
+		}
+		else if(n_right != 0){
+			next = find_next(n_start, kmer_map, false);
+			/*cout << "right" << endl;
+			cout << "n nuc left =  " << n_left <<endl;
+			cout << "n nuc right = " << n_right << endl;
+			cout << "next = " << num2str(next, k) << endl;
+			cout << "start = " << num2str(start, k) << endl;
+			cout << "n_start = " << num2str(n_start, k) << endl;
+			cout << "minim = " << curr_min << endl;
+			cin.get();*/
+			n_right -= 1;
+			if(next != n_start){
+				char new_n = next&3;
+				superkmer.append(num2str(new_n, 1));
+				//superkmer <<= 2;
+				//superkmer += new_n;
+			}else{
+				break;
+			}
+			n_start = next;
+		}
+		else{
+			//cout << intToString(size) << endl;
+			//cout << "superkmer = " << num2str(superkmer, size) << endl;
+			break;
+		}
+		//cin.get();
+	//cout << "find next 2" << endl;
+	}
+	//result_skmer = num2str(superkmer, size);
+	seen_superkmers_at_reconstruction++;
+	//cout << "superkmer = " << superkmer << endl;
+	//cout << "minimizer = " << curr_min << endl;
+	//return result_skmer;
+	return superkmer;
+}
 
+kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map, bool left){
+	//cout << "find next kmer " << endl;
+	char nucs[] = {'A', 'T', 'C', 'G'};
+	kmer next = start;
+	uint64_t n;
+	for(auto &nuc: nucs){
+		if(left){
+			next >>= 2;
+			//next %= (kmer)1<<(2*k)-2;
+			next += nuc2int(nuc) <<(2*k)-2;
+			//cout << "left" << endl;
+		}else{
+			next <<= 2;
+			next += nuc2int(nuc);
+			next %= (kmer)1<<(2*k);
+			//cout << "right" << endl;
+		}
+		//cout << "start = " << num2str(start, k) << endl;
+		//cout << "next  = " << num2str(next, k) << endl;
+		//cin.get();
+		if(kmer_map.count(next)){
+			//cout << "count ok" << endl;
+			//cout << "candidate = " << num2str(next, k) << " seen " << kmer_map[next].seen << endl;
+			if(not kmer_map[next].seen){
+			//kmer_map.erase(next);
+				//cout << "next kmer = " << num2str(next, k) << endl;
+				kmer_map[next].seen = true;
+				seen_kmers_at_reconstruction++;
+				return next;
+			}
+		}
+		next = start;
+	}
+	return start;
+}
+
+kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map){
+	//cout << "find first kmer " << endl;
+	for(auto &k_mer : kmer_map){
+		if(not k_mer.second.seen){
+			//cout << "pos_min = " << intToString(e.second.pos_min) << endl;
+			//cout << "first kmer = " << num2str(k_mer.first, k) << endl;
+			//cout << "minim =   " << num2str(e.first, k).substr(e.second.pos_min, minimizer_size) << endl;
+			//cin.get();
+			seen_kmers_at_reconstruction++;
+			k_mer.second.seen = true;
+			return k_mer.first;
+		}
+	}
+	return -1;
+}
 
 uint64_t Subsampler::compute_threshold(double sampling_rate){
 	//UNCOMMENT THIS LINE TO HAVE THE SAME THRESHOLD AS SOURMASH
@@ -388,6 +546,7 @@ void Subsampler::print_stat(){
         cout<<"This means a practical subsampling rate of "<<(double)total_superkmer_number/selected_superkmer_number<<endl;
         cout<<"This means a mean superkmer size of "<<(double)total_kmer_number/total_superkmer_number<<" kmer per superkmer in the input"<<endl;
         cout<<"This means a mean superkmer size of "<<(double)selected_kmer_number/selected_superkmer_number<<" kmer per superkmer in the output"<<endl;
+		cout << "I have seen " << intToString(seen_kmers_at_reconstruction) << " kmers at reconstruction and " << intToString(seen_superkmers_at_reconstruction) << " superkmers." << endl;
 
         cout <<"Actual output file size is " << intToString(std::filesystem::file_size(subsampled_file)/1000) << "KB" << endl;
         cout <<"This mean " << ((double)std::filesystem::file_size(subsampled_file)*8/selected_kmer_number) << "bits per kmer" << endl;
@@ -396,7 +555,7 @@ void Subsampler::print_stat(){
 		cout << "Density is: " << (((double)selected_superkmer_number/nb_mmer_selected)*(k-minimizer_size+2)) << endl; // d * (w+1)
 		cout << "Number of maximal skmer is: " << count_maximal_skmer << endl;
 		cout << "Proportion of max skmers: " << ((double)count_maximal_skmer/selected_superkmer_number)*100 << "%" << endl;
-        }else{
+		}else{
         cout<<"No kmer selected ***Crickets noise***"<<endl;
         }
 }
