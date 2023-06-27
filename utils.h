@@ -86,6 +86,8 @@ string strDecompressor(const string* str);
 
 vector<string> splitSTR(const string& s, char delim);
 void Biogetline(zstr::ifstream* in,string& result,char type,uint K);
+void clean_dna(string& str,string& previous);
+string getLineFasta(zstr::ifstream* in,string& previous);
 template<typename T>
 inline T xs(const T& x) {
 	return unrevhash(x);

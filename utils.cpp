@@ -670,6 +670,46 @@ void Biogetline(zstr::ifstream* in,string& result,char type,uint K) {
   }
 }
 
+void clean_dna(string& str,string& previous){
+	for(uint i(0); i< str.size(); ++i){
+		switch(str[i]){
+			case 'a':break;
+			case 'A':break;
+			case 'c':break;
+			case 'C':break;
+			case 'g':break;
+			case 'G':break;
+			case 't':break;
+			case 'T':break;
+			default: 
+			previous=str.substr(i+1);
+			str=str.substr(0,i);
+		}
+	}
+	transform(str.begin(), str.end(), str.begin(), ::toupper);
+}
+
+
+
+string getLineFasta(zstr::ifstream* in,string& previous) {
+	string line, result;
+	if(previous.empty()){
+		getline(*in, line);
+		char c = static_cast<char>(in->peek());
+		while (c != '>' and c != EOF) {
+			getline(*in, line);
+			result += line;
+			c = static_cast<char>(in->peek());
+		}
+	}else{
+		result=previous;
+		previous="";
+	}
+	
+	clean_dna(result,previous);
+	return result;
+}
+
 
 
 void split2(const string& s, char delim, vector<string>& res) {
