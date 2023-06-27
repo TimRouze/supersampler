@@ -670,8 +670,12 @@ void Biogetline(zstr::ifstream* in,string& result,char type,uint K) {
   }
 }
 
-void clean_dna(string& str,string& previous){
+
+
+void clean_dna(string& str){
+	vector<int> positions;
 	for(uint i(0); i< str.size(); ++i){
+		
 		switch(str[i]){
 			case 'a':break;
 			case 'A':break;
@@ -682,8 +686,16 @@ void clean_dna(string& str,string& previous){
 			case 't':break;
 			case 'T':break;
 			default: 
-			previous=str.substr(i+1);
-			str=str.substr(0,i);
+			positions.push_back(i);
+
+		}
+	}
+	if(positions.size() == str.size()){
+		str = "";
+	}else{
+		sort(positions.begin(), positions.end(), greater{});
+		for(uint i(0); i< positions.size(); ++i){
+			str.erase(positions[i], 1);
 		}
 	}
 	transform(str.begin(), str.end(), str.begin(), ::toupper);
@@ -691,24 +703,20 @@ void clean_dna(string& str,string& previous){
 
 
 
-string getLineFasta(zstr::ifstream* in,string& previous) {
+string getLineFasta(zstr::ifstream* in) {
 	string line, result;
-	if(previous.empty()){
+	getline(*in, line);
+	char c = static_cast<char>(in->peek());
+	while (c != '>' and c != EOF) {
 		getline(*in, line);
-		char c = static_cast<char>(in->peek());
-		while (c != '>' and c != EOF) {
-			getline(*in, line);
-			result += line;
-			c = static_cast<char>(in->peek());
-		}
-	}else{
-		result=previous;
-		previous="";
+		result += line;
+		c = static_cast<char>(in->peek());
 	}
-	
-	clean_dna(result,previous);
+
+	clean_dna(result);
 	return result;
 }
+
 
 
 
@@ -728,8 +736,6 @@ void split2(const string& s, char delim, vector<string>& res) {
 		res.push_back((word));
 	}
 }
-
-
 
 string bool2str(vector<bool> V) {
 	string result;

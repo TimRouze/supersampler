@@ -222,7 +222,6 @@ void Subsampler::handle_superkmer(string& superkmer, map<uint32_t, ankerl::unord
 		kmerstr=superkmer.substr(i, k);
 		position_min = kmerstr.find(num2str(input_minimizer, minimizer_size));
 		kmer seq(str2num(kmerstr));
-		//cout << "curr kmer = " << kmerstr << endl;
 		if(minimizer_map.count(input_minimizer)){
 			if(minimizer_map[input_minimizer].count(seq)){
 				minimizer_map[input_minimizer][seq].count++;
@@ -273,11 +272,11 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 		uint32_t old_minimizer, minimizer;
 		mutex mutexRead;
         vector<bool> skmer;
-		while (not input_stream->eof() or prev.size() != 0) {
+		while (not input_stream->eof()) {
 			ref = useless = "";
 			{
                 //Biogetline(input_stream,ref,'A',k);
-				ref = getLineFasta(input_stream, prev);
+				ref = getLineFasta(input_stream);
 				if (ref.size() < k) {
 					ref = "";
 				} else {
