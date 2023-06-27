@@ -10,6 +10,7 @@ SuperSampler uses super-k-mers instead of k-mers which allows for lighter sketch
 
 Sketch creation is an application of FracMinHash on the selection of minimizers (a m-mer of a k-mer which hash value is minimal). When a minimizer is selected, every k-mer around it which shares the same minimizer is selected and will form a super-k-mer.
 
+[Preprint](https://www.biorxiv.org/content/10.1101/2023.06.21.545875v1)
 
 ## Key properties
 SuperSampler:
