@@ -512,28 +512,28 @@ uint64_t Subsampler::compute_threshold(double sampling_rate){
 
 void Subsampler::print_stat(){
     if(selected_kmer_number!=0){
-        cout<<"I have seen "<<intToString(total_kmer_number)<<" kmers and I selected "<<intToString(selected_kmer_number)<<" kmers"<<endl;
-        cout<<"This means a practical subsampling rate of "<<(double)total_kmer_number/selected_kmer_number<<endl;
-        cout<<"I have seen "<<intToString(total_superkmer_number)<<" superkmers and I selected "<<intToString(selected_superkmer_number)<<" superkmers"<<endl;
-        cout<<"This means a practical subsampling rate of "<<(double)total_superkmer_number/selected_superkmer_number<<endl;
-        cout<<"This means a mean superkmer size of "<<(double)total_kmer_number/total_superkmer_number<<" kmer per superkmer in the input"<<endl;
-        cout<<"This means a mean superkmer size of "<<(double)selected_kmer_number/selected_superkmer_number<<" kmer per superkmer in the output"<<endl;
+        cout << "I have seen " << intToString(total_kmer_number) << " kmers and I selected " << intToString(selected_kmer_number) << " kmers" << endl;
+		cout << "After removing duplicate kmers, I selected " << intToString(seen_kmers_at_reconstruction) << " kmers" << endl;
+        cout << "This means a practical subsampling rate of " << (double)total_kmer_number/selected_kmer_number << " with duplicates" << endl;
+        cout << "This means a practical subsampling rate of " << (double)total_kmer_number/seen_kmers_at_reconstruction << " without duplicates" << endl;
+        cout << "I have seen " << intToString(total_superkmer_number) << " superkmers and I selected " << intToString(selected_superkmer_number) << " superkmers" << endl;
+		cout << "After reconstruction, I have selected " << intToString(seen_superkmers_at_reconstruction) << " superkmers" << endl;
+        cout << "This means a practical subsampling rate of " << (double)total_superkmer_number/selected_superkmer_number << " with duplicates" << endl;
+        cout << "This means a practical subsampling rate of " << (double)total_superkmer_number/seen_superkmers_at_reconstruction << " without duplicates" << endl;
+        cout << "This means a mean superkmer size of " << (double)total_kmer_number/total_superkmer_number << " kmer per superkmer in the input" << endl;
+        cout << "This means a mean superkmer size of " << (double)selected_kmer_number/selected_superkmer_number << " kmer per superkmer with duplicates" << endl;
+        cout << "This means a mean superkmer size of " << (double)seen_kmers_at_reconstruction/seen_superkmers_at_reconstruction << " kmer per superkmer in the output" << endl;
 
         cout <<"Actual output file size is " << intToString(std::filesystem::file_size(subsampled_file)/1000) << "KB" << endl;
-        cout <<"This mean " << ((double)std::filesystem::file_size(subsampled_file)*8/selected_kmer_number) << " bits per kmer" << endl;
-        cout << "Minimizer number: " << actual_minimizer_number << " Skmer/minimizer: " << selected_superkmer_number/actual_minimizer_number << endl;
-        cout << "Cursed kmers: " << cursed_kmer_number<<endl;
+        cout <<"This mean " << ((double)std::filesystem::file_size(subsampled_file)*8/seen_kmers_at_reconstruction) << " bits per kmer" << endl;
+        cout << "Minimizer number: " << intToString(actual_minimizer_number) << " Skmer/minimizer:                    " << selected_superkmer_number/actual_minimizer_number << endl;
+        cout << "Minimizer number: " << intToString(actual_minimizer_number) << " Skmer/minimizer without duplicates: " << seen_superkmers_at_reconstruction/actual_minimizer_number << endl;
 		cout << "Density is: " << (((double)selected_superkmer_number/nb_mmer_selected)*(k-minimizer_size+2)) << endl; // d * (w+1)
-		cout << "Number of maximal skmer is: " << count_maximal_skmer << endl;
-		cout << "Proportion of max skmers: " << ((double)count_maximal_skmer/selected_superkmer_number)*100 << "%" << endl;
-		cout << "=========================================================== RECONSTRUCTION ===========================================================" << endl;
-		
-		cout << "I have seen " << intToString(total_kmer_number_at_reconstruction) << " kmers and " << intToString(seen_superkmers_at_reconstruction) << " superkmers during reconstruction." << endl;
-        cout << "I have seen " << intToString(seen_unique_kmers_at_reconstruction) << " unique kmers." << endl;
-		cout<<"This means a mean superkmer size of "<<(double)seen_unique_kmers_at_reconstruction/seen_superkmers_at_reconstruction<<" kmer per superkmer in the output"<<endl;
-		cout << "Proportion of max skmers: " << ((double)seen_max_superkmers_at_reconstruction/seen_superkmers_at_reconstruction)*100 << "%" << endl;
-        cout <<"This mean " << ((double)std::filesystem::file_size(subsampled_file)*8/seen_unique_kmers_at_reconstruction) << " bits per kmer" << endl;
-		cout << "Density is: " << (((double)seen_superkmers_at_reconstruction/nb_mmer_selected)*(k-minimizer_size+2)) << endl; // d * (w+1)
+		cout << "Number of maximal skmer was:       " << intToString(count_maximal_skmer) << endl;
+		cout << "Actual number of maximal skmer is: " << intToString(seen_max_superkmers_at_reconstruction) << endl;
+		cout << "Proportion of max skmers:        " << ((double)count_maximal_skmer/selected_superkmer_number)*100 << "% with duplicate kmers" << endl;
+		cout << "Actual proportion of max skmers: " << ((double)seen_max_superkmers_at_reconstruction/seen_superkmers_at_reconstruction)*100 << "%" << endl;
+		cout << "\n" << endl;
 		}else{
         cout<<"No kmer selected ***Crickets noise***"<<endl;
         }
