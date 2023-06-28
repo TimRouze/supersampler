@@ -531,7 +531,7 @@ void Subsampler::print_stat(){
 		cout << "I have seen " << intToString(total_kmer_number_at_reconstruction) << " kmers and " << intToString(seen_superkmers_at_reconstruction) << " superkmers during reconstruction." << endl;
         cout << "I have seen " << intToString(seen_unique_kmers_at_reconstruction) << " unique kmers." << endl;
 		cout<<"This means a mean superkmer size of "<<(double)seen_unique_kmers_at_reconstruction/seen_superkmers_at_reconstruction<<" kmer per superkmer in the output"<<endl;
-		cout << "Proportion of max skmers: " << ((double)count_maximal_skmer/seen_superkmers_at_reconstruction)*100 << "%" << endl;
+		cout << "Proportion of max skmers: " << ((double)seen_max_superkmers_at_reconstruction/seen_superkmers_at_reconstruction)*100 << "%" << endl;
         cout <<"This mean " << ((double)std::filesystem::file_size(subsampled_file)*8/seen_unique_kmers_at_reconstruction) << " bits per kmer" << endl;
 		cout << "Density is: " << (((double)seen_superkmers_at_reconstruction/nb_mmer_selected)*(k-minimizer_size+2)) << endl; // d * (w+1)
 		}else{
