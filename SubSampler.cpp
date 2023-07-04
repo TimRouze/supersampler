@@ -206,7 +206,6 @@ string get_out_name(const string& str, const string& prefix){
 
 void Subsampler::handle_superkmer(string& superkmer, map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev){
 	string header(">\n");
-	test_file_kmer->write(header.c_str(), header.size());
 	selected_superkmer_number++;
 	if(inputrev){
 		superkmer=revComp(superkmer);
