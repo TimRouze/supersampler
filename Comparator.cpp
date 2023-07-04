@@ -115,6 +115,7 @@ void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_
             //HERE WE READ THE MAXIMALSUPERKMERS
             while((i+k) <= skip->size()){
                 curr_kmer = str2num(skip->substr(i, k-1));
+                //TO PRINT
                 for(uint j(0);j<k-m+1;++j){
                     updateK(curr_kmer, skip->at(i+k-1), k);
                     kmer canon=canonize(curr_kmer,k);
@@ -425,8 +426,9 @@ void Comparator::print_jaccard(const string& outfile){
                 if(score_A.count(i*nb_files+j)==0){
                     out<<"0";
                 }else{
-                    //cout<<"Inter:"<<score_A[i*nb_files+j]<<" Union:"<<(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j])<<" A:"<<nb_kmer_seen_infile[i]<<" B:"<<nb_kmer_seen_infile[j]<<endl;
+                    //cout<<"Inter:"<<intToString(score_A[i*nb_files+j])<<" Union:"<<intToString((nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
                     double score=(double)score_A[i*nb_files+j]/(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]);
+                    //double score=(double)59/179;
                     if(score<min_threshold){
                         out<<'0';
                     }else{
@@ -437,6 +439,7 @@ void Comparator::print_jaccard(const string& outfile){
                 if(score_A.count(j*nb_files+i)==0){
                     out<<"0";
                 }else{
+                    //cout<<"Inter:"<<intToString(score_A[i*nb_files+j])<<" Union:"<<intToString((nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
                     double score=(double)score_A[j*nb_files+i]/(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[j*nb_files+i]);
                     if(score<min_threshold){
                         out<<'0';

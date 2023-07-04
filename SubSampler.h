@@ -36,6 +36,7 @@ class Subsampler {
     double  subsampling_rate;
     uint64_t max_superkmer_size;
     uint64_t selection_threshold;
+    uint64_t abundance;
     uint type;
     //VARIABLES
     uint64_t total_kmer_number;
@@ -56,9 +57,10 @@ class Subsampler {
     uint64_t mask;
     string subsampled_file;
     DecyclingSet* velo;
-    Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype){
+    Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype, uint iabundance){
 		velo= new DecyclingSet(i_minimizer);
         k=ik;
+        abundance = iabundance;
         minimizer_size=i_minimizer;
         coreNumber=icore;
         first1=(uint64_t)1<<63;
@@ -87,10 +89,10 @@ class Subsampler {
 	void updateRCM(uint64_t& min, char nuc);
     uint64_t regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev);
     //void handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev);
-    void handle_superkmer(string& superkmer,map<uint32_t, ankerl::unordered_dense::map<uint64_t, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev);
-    string reconstruct_superkmer(ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map, kmer& start, string& curr_min);
-    kmer find_first_kmer(ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map);
-    kmer find_next(kmer start, ankerl::unordered_dense::map<uint64_t, kmer_info>& kmer_map, bool left);
+    void handle_superkmer(string& superkmer,map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev);
+    string reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, kmer& start, string& curr_min);
+    kmer find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map);
+    kmer find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, bool left);
     void store_kmers(const string& input_file);
     uint64_t compute_threshold(double sampling_rate);
     void print_stat();
