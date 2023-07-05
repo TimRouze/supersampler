@@ -98,8 +98,8 @@ string strDecompressor(const string* str){
 		result+=fchar[3];
 	}
 	if(mod!=0){
-		for(uint64_t i(0);i<mod;++i){
-			Packed_nuc=str->at(last);
+		Packed_nuc=str->at(last);
+		for(uint64_t i(0);i<mod+1;++i){
 			fchar[mod-i]=int2nuc(Packed_nuc%4);
 			Packed_nuc>>=2;
 		}
