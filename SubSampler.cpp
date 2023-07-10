@@ -89,15 +89,17 @@ uint64_t Subsampler::unrevhash(uint64_t x){
 
 uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev) {
 	is_rev = false;
+	kmer tmp(seq);
 	uint64_t mini, mmer, canon_mmer;
 	mmer = seq & offsetUpdateMinimizer;
 	mini        = canonize(mmer, minimizer_size);
+	position = k-minimizer_size;
 	if(mini != mmer){
 		is_rev = true;
+		position = 0;
 	}
 	mmer = mini;
 	uint64_t hash_mini = (unrevhash(mmer));
-	position = 0;
 	//For every m-mer in kmer
 	for (uint64_t i(1); i <= k - minimizer_size; i++) {
 		bool local_rev;
@@ -116,19 +118,41 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 		//If current m-mer is smaller than current minimizer
 		//Replace previous by new minimizer
 		if (hash_mini > hash) {
-			position  = k - minimizer_size - i;
-			mini      = mmer;
-			is_rev = local_rev;
-			hash_mini = hash;
+			if(local_rev){
+				position  = i;
+				mini      = mmer;
+				is_rev = local_rev;
+				hash_mini = hash;
+			}else{
+				position  = k-minimizer_size-i;
+				mini      = mmer;
+				is_rev = local_rev;
+				hash_mini = hash;
+			}
 		//If both current m-mer and current minimizer are equal
 		}else if(mmer == mini){
 			//If they are on the same reading order, we prioritise leftmost ones hence nothing to do
 			//If they are on different reading orders (one rc and one forward)
 			if(local_rev != is_rev){
-				//If current m-mer's position is more on the left than current minimizer
-				//Replace previous by current m-mer which becomes the minimizer.
-				if(position > (k-minimizer_size - i)){
-					position  = k - minimizer_size - i;
+				//cout << "Minimizers are on different reading orders" << endl;
+				if(is_rev){
+					//If previous minimizer is on rc and current is not, we change minimizer to take the one on the 3' 5' order.
+					position  = k-minimizer_size-i;
+					mini      = mmer;
+					is_rev = local_rev;
+					hash_mini = hash;
+				}
+				//Else, we keep the minimizer on the 3' 5' order
+				
+			}else{
+				if(is_rev and position > i){
+					position  = i;
+					mini      = mmer;
+					is_rev = local_rev;
+					hash_mini = hash;
+				}
+				if(!is_rev and position > k-minimizer_size-i){
+					position  = k-minimizer_size-i;
 					mini      = mmer;
 					is_rev = local_rev;
 					hash_mini = hash;
@@ -205,7 +229,6 @@ string get_out_name(const string& str, const string& prefix){
 
 
 void Subsampler::handle_superkmer(string& superkmer, map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev){
-	string header(">\n");
 	selected_superkmer_number++;
 	if(inputrev){
 		superkmer=revComp(superkmer);
@@ -246,7 +269,6 @@ void Subsampler::handle_superkmer(string& superkmer, map<uint32_t, ankerl::unord
 	}
 }
 
-//TODO CHANGE MAP TO https://github.com/martinus/unordered_dense.
 //CHECK FOR RC
 // RENAME IN SUBSAMPLE ?
 void Subsampler::parse_fasta_test(const string& input_file, const string& output_prefix) {
@@ -254,6 +276,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
     uint64_t read_kmer(0);
 	string tmp;
 	zstr::ifstream* input_stream = openFile(input_file);
+	//string header(">\n");
     if(input_stream==NULL){
         cout<<"Can't open file: "<<input_file<<endl;
         return;
@@ -286,7 +309,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			}
 			// FOREACH sequence
 			if (not ref.empty()) {
-				uint64_t skmer_size(0);
+				uint64_t skmer_size(k);
 				bool is_rev, old_rev;
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
@@ -344,7 +367,6 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 								// add skmer size without overlap
 								nb_mmer_selected += i + k - (pos_end + 1);
 							}
-						//if(unrevhash(old_minimizer)%subsampling_rate == 0){
 							//THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
 							handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),minimizer_map,old_minimizer,old_rev);
 							pos_end = i + k - 1;
@@ -418,6 +440,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
     actual_minimizer_number=minimizer_map.size();
 	delete input_stream;
     delete out_file_skmer;
+	//delete kmers_file;
 }
 
 string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, kmer& start, string& curr_min){
@@ -464,6 +487,7 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 	char nucs[] = {'A', 'T', 'C', 'G'};
 	kmer next = start;
 	uint64_t n;
+	//string header(">\n");
 	for(auto &nuc: nucs){
 		if(left){
 			next >>= 2;
@@ -476,6 +500,11 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 		if(kmer_map.count(next)){
 			if(not kmer_map[next].seen and kmer_map[next].count >= abundance ){
 				kmer_map[next].seen = true;
+				
+				/*string k_mer(num2str(next, k)+"\n");
+				kmers_file->write(header.c_str(), header.size());
+				kmers_file->write(k_mer.c_str(), k_mer.size());*/
+				
 				seen_unique_kmers_at_reconstruction++;
 				total_kmer_number_at_reconstruction += kmer_map[next].count;
 				return next;
@@ -487,11 +516,17 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 }
 
 kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map){
+
+	//string header(">\n");
 	for(auto &k_mer : kmer_map){
 		if(not k_mer.second.seen and k_mer.second.count >= abundance){
 			total_kmer_number_at_reconstruction += k_mer.second.count;
 			seen_unique_kmers_at_reconstruction++;
 			k_mer.second.seen = true;
+			/*string to_write(num2str(k_mer.first, k)+"\n");
+				
+			kmers_file->write(header.c_str(), header.size());
+			kmers_file->write(to_write.c_str(), to_write.size());*/
 			return k_mer.first;
 		}
 	}
