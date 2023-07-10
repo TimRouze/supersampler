@@ -88,6 +88,8 @@ uint64_t Subsampler::unrevhash(uint64_t x){
 
 
 uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev) {
+	cout<<"RMP"<<endl;
+	cout<<num2str(seq,k)<<" "<<revComp(num2str(seq,k))<<endl;
 	is_rev = false;
 	kmer tmp(seq);
 	uint64_t mini, mmer, canon_mmer;
@@ -118,6 +120,7 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 		//If current m-mer is smaller than current minimizer
 		//Replace previous by new minimizer
 		if (hash_mini > hash) {
+			cout<<"CASE9"<<endl;
 			// if(local_rev){
 				// position  = i;
 				// mini      = mmer;
@@ -131,35 +134,42 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 			// }
 		//If both current m-mer and current minimizer are equal
 		}else if(mmer == mini){
+			cout<<"CASE0"<<endl;
 			//If they are on the same reading order, we prioritise leftmost ones hence nothing to do
 			//If they are on different reading orders (one rc and one forward)
 			if(local_rev != is_rev){
 				//cout << "Minimizers are on different reading orders" << endl;
-				if(is_rev){
-					//If previous minimizer is on rc and current is not, we change minimizer to take the one on the 3' 5' order.
+				// if(is_rev){
+				// 	//If previous minimizer is on rc and current is not, we change minimizer to take the one on the 3' 5' order.
+				// 	position  = k-minimizer_size-i+1;
+				// 	mini      = mmer;
+				// 	is_rev = local_rev;
+				// 	hash_mini = hash;
+				// 	cout<<"CASE1"<<endl;
+				// }
+				cout<<"CASE1.5?"<<endl;
+				//Else, we keep the minimizer on the 3' 5' order
+				
+			}else{
+				cout<<"CASE2.5?"<<endl;
+				if(is_rev and position > i){
+					position  = i;
+					mini      = mmer;
+					is_rev = local_rev;
+					hash_mini = hash;
+					cout<<"CASE2"<<endl;
+				}
+				if(!is_rev and position > k-minimizer_size-i){
+					cout<<"CASE3"<<endl;
 					position  = k-minimizer_size-i;
 					mini      = mmer;
 					is_rev = local_rev;
 					hash_mini = hash;
 				}
-				//Else, we keep the minimizer on the 3' 5' order
-				
-			}else{
-				// if(is_rev and position > i){
-				// 	position  = i;
-				// 	mini      = mmer;
-				// 	is_rev = local_rev;
-				// 	hash_mini = hash;
-				// }
-				// if(!is_rev and position > k-minimizer_size-i){
-					position  = k-minimizer_size-i;
-					mini      = mmer;
-					is_rev = local_rev;
-					hash_mini = hash;
-				// }
 			}
 		}
 	}
+	cout<<num2str(mini,minimizer_size)<<" "<<revComp(num2str(mini,minimizer_size))<<endl;
     return mini;
 }
 
@@ -314,7 +324,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 			// FOREACH sequence
 			if (not ref.empty()) {
 				uint64_t skmer_size(k);
-				bool is_rev, old_rev;
+				bool is_rev, old_rev,dump;
 				old_minimizer = minimizer = minimizer_number;
 				uint64_t last_position(0);
 				uint64_t position_min;
@@ -353,12 +363,14 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 							// the previous minimizer is outdated
 							cout<<"OUTDATED"<<endl;
 							minimizer = regular_minimizer_pos(seq, position_min, is_rev);
+							dump=true;
 							hash_min  = unrevhash(minimizer);
 							position_min += (i + 1);
 						}
 					}
 
-					if(old_minimizer != minimizer){
+					if(old_minimizer != minimizer or dump){
+						dump=false;
 						//THE MINIMIZER CHANGED WE MUST HANDLE THE ASSOCIATED SUPERKMER
 						if(unrevhash(old_minimizer) <= selection_threshold){
 							// pos_end: end of previous skmer (inclusive)
@@ -377,6 +389,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 								nb_mmer_selected += i + k - (pos_end + 1);
 							}
 							cout<<"GO HANDLE KMER"<<endl;
+							cout<<ref.substr(last_position, i+k-last_position)<<endl;
 							cout<<num2str(old_minimizer,minimizer_size)<<endl;
 							cout<<revComp(num2str(old_minimizer,minimizer_size))<<endl;
 							//THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
