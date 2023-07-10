@@ -118,17 +118,17 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 		//If current m-mer is smaller than current minimizer
 		//Replace previous by new minimizer
 		if (hash_mini > hash) {
-			if(local_rev){
-				position  = i;
-				mini      = mmer;
-				is_rev = local_rev;
-				hash_mini = hash;
-			}else{
+			// if(local_rev){
+				// position  = i;
+				// mini      = mmer;
+				// is_rev = local_rev;
+				// hash_mini = hash;
+			// }else{
 				position  = k-minimizer_size-i;
 				mini      = mmer;
 				is_rev = local_rev;
 				hash_mini = hash;
-			}
+			// }
 		//If both current m-mer and current minimizer are equal
 		}else if(mmer == mini){
 			//If they are on the same reading order, we prioritise leftmost ones hence nothing to do
@@ -145,18 +145,18 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t& position, bool& i
 				//Else, we keep the minimizer on the 3' 5' order
 				
 			}else{
-				if(is_rev and position > i){
-					position  = i;
-					mini      = mmer;
-					is_rev = local_rev;
-					hash_mini = hash;
-				}
-				if(!is_rev and position > k-minimizer_size-i){
+				// if(is_rev and position > i){
+				// 	position  = i;
+				// 	mini      = mmer;
+				// 	is_rev = local_rev;
+				// 	hash_mini = hash;
+				// }
+				// if(!is_rev and position > k-minimizer_size-i){
 					position  = k-minimizer_size-i;
 					mini      = mmer;
 					is_rev = local_rev;
 					hash_mini = hash;
-				}
+				// }
 			}
 		}
 	}
@@ -245,6 +245,10 @@ void Subsampler::handle_superkmer(string& superkmer, map<uint32_t, ankerl::unord
 	for(;i+k<=superkmer.size();++i){
 		kmerstr=superkmer.substr(i, k);
 		position_min = kmerstr.find(num2str(input_minimizer, minimizer_size));
+		if(position_min==string::npos){
+			cout<<"PB"<<endl;
+			cin.get();
+		}
 		kmer seq(str2num(kmerstr));
 		if(minimizer_map.count(input_minimizer)){
 			if(minimizer_map[input_minimizer].count(seq)){
@@ -326,11 +330,15 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 				// FOREACH KMER
 				for (; i + k < ref.size(); ++i) {
 					updateK(seq, ref[i + k]);
+					cout<<num2str(seq,k)<<" "<<revComp(num2str(seq,k))<<endl;
 					updateM(min_seq, ref[i + k]);
 					updateRCM(min_rcseq, ref[i + k]);
 					min_canon      = (min(min_seq, min_rcseq));
+					cout<<num2str(old_minimizer,minimizer_size)<<endl;
+					cout<<position_min-i<<endl;
 					uint64_t new_h = unrevhash(min_canon);
 					if (new_h < hash_min) {
+						cout<<"NEW MIN"<<endl;
 						// THE NEW mmer is a MINIMIZER
 						minimizer    = min_canon;
 						hash_min     = new_h;
@@ -343,6 +351,7 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 					}else {
 						if (i >= position_min) {
 							// the previous minimizer is outdated
+							cout<<"OUTDATED"<<endl;
 							minimizer = regular_minimizer_pos(seq, position_min, is_rev);
 							hash_min  = unrevhash(minimizer);
 							position_min += (i + 1);
@@ -367,6 +376,9 @@ void Subsampler::parse_fasta_test(const string& input_file, const string& output
 								// add skmer size without overlap
 								nb_mmer_selected += i + k - (pos_end + 1);
 							}
+							cout<<"GO HANDLE KMER"<<endl;
+							cout<<num2str(old_minimizer,minimizer_size)<<endl;
+							cout<<revComp(num2str(old_minimizer,minimizer_size))<<endl;
 							//THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
 							handle_superkmer(superstr=ref.substr(last_position, i+k-last_position),minimizer_map,old_minimizer,old_rev);
 							pos_end = i + k - 1;
