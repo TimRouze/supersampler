@@ -59,6 +59,7 @@ class Subsampler {
     uint64_t mask;
     string subsampled_file;
     DecyclingSet* velo;
+    map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> minimizer_map;
     Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype, uint iabundance){
 		velo= new DecyclingSet(i_minimizer);
         k=ik;
@@ -93,7 +94,7 @@ class Subsampler {
 	void updateRCM(uint64_t& min, char nuc);
     uint64_t regular_minimizer_pos(kmer seq, uint64_t& position, bool& is_rev);
     //void handle_superkmer(string& superkmer,map<uint32_t,pair<vector<bool>,string>>& sketch_max,kmer input_minimizer, bool inputrev);
-    void handle_superkmer(string& superkmer,map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>>& minimizer_map,kmer input_minimizer, bool inputrev);
+    void handle_superkmer(string& superkmer,kmer input_minimizer, bool inputrev);
     string reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, kmer& start, string& curr_min);
     kmer find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map);
     kmer find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, bool left);

@@ -24,6 +24,7 @@ class Comparator{
         bool run;
         vector<string> files_names;
         ankerl::unordered_dense::map<uint32_t, uint32_t> score_A;
+        //zstr::ofstream* kmers_comp;
         Comparator(uint p,double mt){
             skmer_size = m = nb_kmer_seen = nb_kmer_tot = k =nb_files= nb_files_eof= 0;
             run = true;

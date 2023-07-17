@@ -29,7 +29,6 @@ void Comparator::compare_buckets(uint size_query){
     vector<uint64_t> indices;
     vector<string> lines;
     string header;
-
     for(uint i(0);i<files_names.size();++i){
         auto in=openFile(files_names[i]);
         if(in!=NULL){
@@ -70,6 +69,7 @@ void Comparator::compare_buckets(uint size_query){
     for(uint64_t f = 0; f < input_files.size(); ++f){
         delete input_files[f];
     }
+    //delete out_kmer;
 }
 
 

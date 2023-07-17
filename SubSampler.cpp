@@ -240,7 +240,7 @@ string get_out_name(const string &str, const string &prefix)
 	}
 }*/
 
-void Subsampler::handle_superkmer(string &superkmer, map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> &minimizer_map, kmer input_minimizer, bool inputrev)
+void Subsampler::handle_superkmer(string &superkmer, kmer input_minimizer, bool inputrev)
 {
 	selected_superkmer_number++;
 	if (inputrev)
@@ -267,8 +267,8 @@ void Subsampler::handle_superkmer(string &superkmer, map<uint32_t, ankerl::unord
 			cout << "PB" << endl;
 			cin.get();
 		}
-		/* kmer seq(str2num(kmerstr));
-		kmers_file->write(header.c_str(), header.size());
+		kmer seq(str2num(kmerstr));
+		/* kmers_file->write(header.c_str(), header.size());
 		kmers_file->write(kmerstr.c_str(), kmerstr.size());
 		kmers_file->write("\n", 1); */
 		if (minimizer_map.count(input_minimizer))
@@ -276,6 +276,7 @@ void Subsampler::handle_superkmer(string &superkmer, map<uint32_t, ankerl::unord
 			if (minimizer_map[input_minimizer].count(seq))
 			{
 				minimizer_map[input_minimizer][seq].count++;
+				//selected_kmer_number++;
 			}
 			else
 			{
@@ -283,12 +284,12 @@ void Subsampler::handle_superkmer(string &superkmer, map<uint32_t, ankerl::unord
 				new_kmer.count = 1;
 				new_kmer.pos_min = position_min;
 				minimizer_map[input_minimizer][seq] = new_kmer;
-				// selected_kmer_number++;
+				//selected_kmer_number++;
 			}
 		}
 		else
 		{
-			// selected_kmer_number++;
+			//selected_kmer_number++;
 			kmer_info new_kmer;
 			new_kmer.count = 1;
 			new_kmer.pos_min = position_min;
@@ -323,7 +324,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 	// subsampled_file=output_prefix +clean_input_file+".gz";
 	subsampled_file = get_out_name(input_file, output_prefix) + ".gz";
 	zstr::ofstream *out_file_skmer = (new zstr::ofstream(subsampled_file, 21, 9));
-	map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> minimizer_map;
+	//map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> minimizer_map;
 	nb_mmer_selected = 0;
 	{
 		string ref, useless, superstr, skmerstr, prev;
@@ -422,7 +423,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 								nb_mmer_selected += i + k - (pos_end + 1);
 							}
 							// THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-							handle_superkmer(superstr = ref.substr(last_position, i + k - last_position), minimizer_map, old_minimizer, old_rev);
+							handle_superkmer(superstr = ref.substr(last_position, i + k - last_position), old_minimizer, old_rev);
 							pos_end = i + k - 1;
 						}
 						total_kmer_number += (i - last_position + 1);
@@ -444,7 +445,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 						nb_mmer_selected -= minimizer_size - 1;
 						// if(unrevhash(old_minimizer)%subsampling_rate == 0){
 						// THE MINIMIZER IS SELECTED WE MUST OUTPUT THE ASSOCIATED SUPERKMER
-						handle_superkmer(superstr = ref.substr(last_position, i + k - last_position), minimizer_map, old_minimizer, old_rev);
+						handle_superkmer(superstr = ref.substr(last_position, i + k - last_position), old_minimizer, old_rev);
 						pos_end = i + k - 1;
 					}
 					total_kmer_number += (i - last_position + 1);
