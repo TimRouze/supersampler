@@ -56,6 +56,7 @@ using namespace std;
 
 kmer nuc2int(char c);
 kmer nuc2intrc(char c);
+char int2nuc(unsigned char n);
 void updateK(kmer& min, char nuc, uint64_t& k);
 void read_vector_bool(vector<bool>& V, zstr::ifstream* out, uint64_t n_bits);
 void dump_vector_bool(const vector<bool>& V, ostream* out);
@@ -86,6 +87,8 @@ string strDecompressor(const string* str);
 
 vector<string> splitSTR(const string& s, char delim);
 void Biogetline(zstr::ifstream* in,string& result,char type,uint K);
+void clean_dna(string& str);
+string getLineFasta(zstr::ifstream* in);
 template<typename T>
 inline T xs(const T& x) {
 	return unrevhash(x);
