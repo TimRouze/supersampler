@@ -36,11 +36,12 @@ class Comparator{
         void compare_files(const string& fileofile);
         bool findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_vector);
         void increment_files(const vector<istream*>& files, const vector<uint64_t>& indices);
-        void update_colormap(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer);//, zstr::ofstream* out_kmer);
-        void compare_buckets(uint size_query);
+        void count_intersection(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer);//, zstr::ofstream* out_kmer);
+        void compare_sketches(uint size_query);
         void skip_bucket(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer);//, zstr::ofstream* out_kmer);
-        void compute_scores(const vector<istream*>& files,const ankerl::unordered_dense::map<kmer,  vector<bool>>& color_map,vector<kmer>& interesting_hits);
+        void compute_scores(const ankerl::unordered_dense::map<kmer,  vector<bool>>& color_map,vector<kmer>& interesting_hits);
         void getfilesname(const string& fof, vector<string>& result);
+        void get_header_info(const vector<istream*>& files);
         string inject_minimizer(const string* str, const string& minimizerstr);
 };
 

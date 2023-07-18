@@ -20,10 +20,23 @@ void Comparator::getfilesname(const string& fileofile, vector<string>& result){
     }
 }
 
+void Comparator::get_header_info(const vector<istream*>& files){
+    string header;
+    for(uint64_t f = 0; f < files.size(); ++f){
+        getline(*files[f], header);
+        skmer_size = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        m = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        nb_kmer_tot = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        sub_rate = stoi(header);
+        k = ((skmer_size + m)/2); //-m
+        skmer_size-=m;
+    }
+}
 
-
-//TODO SHOULD BE COMPARE SKETCHES
-void Comparator::compare_buckets(uint size_query){
+void Comparator::compare_sketches(uint size_query){
     query_size=size_query;
     vector<istream*> input_files;
     vector<uint64_t> indices;
@@ -39,19 +52,7 @@ void Comparator::compare_buckets(uint size_query){
     nb_kmer_seen_infile.resize(input_files.size(), 0);
     minimizers.resize(input_files.size());
     vector<uint64_t> min_vector(input_files.size());
-    for(uint64_t f = 0; f < input_files.size(); ++f){
-        getline(*input_files[f], header);
-        //cout << header << endl;
-        skmer_size = stoi(header.substr(0, header.find(" ")));
-        header.erase(0, header.find(" ") + 1);
-        m = stoi(header.substr(0, header.find(" ")));
-        header.erase(0, header.find(" ") + 1);
-        nb_kmer_tot = stoi(header.substr(0, header.find(" ")));
-        header.erase(0, header.find(" ") + 1);
-        sub_rate = stoi(header);
-        k = ((skmer_size + m)/2); //-m
-        skmer_size-=m;
-    }
+    get_header_info(input_files);
     cout << "kmers evaluated are of length: " << k << " minimizer size is " << m << endl;
     increment_files(input_files, indices);
     while(run){
@@ -61,7 +62,7 @@ void Comparator::compare_buckets(uint size_query){
             skip_bucket(input_files, indices, num2str(minimizers[indices[0]],m));//, out_kmer);
             increment_files(input_files, indices);
         }else{
-            update_colormap(input_files, indices,num2str(minimizers[indices[0]],m));//, out_kmer);
+            count_intersection(input_files, indices,num2str(minimizers[indices[0]],m));//, out_kmer);
             increment_files(input_files, indices);
         }
     }
@@ -91,7 +92,7 @@ string Comparator::inject_minimizer(const string* str, const string& minimizerst
 }
 
 
-
+//TODO ADD NB KMER IN SKETCH HEADER + ONLY READ THE LINES WITHOUT ACTUALLY READING KMERS
 //NO COMPARISON TO DO IN THIS BUCKET BUT WE STILL HAVE TO COUNT THE AMOUNT OF KMERS
 void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_t>& indices,const string& strminimizer){//, zstr::ofstream* out_kmer){
     ankerl::unordered_dense::set<kmer> skip_map;
@@ -173,8 +174,7 @@ string kmer2str(kmer num,uint k){
 
 
 
-//TODO SHOULD BE CALLED COUNT INTERSECTION OR SOMETHING LIKEdna THAT
-void Comparator::update_colormap(const vector<istream*>& files, const vector<uint64_t>& indices,const string& strminimizer){//, zstr::ofstream* out_kmer){
+void Comparator::count_intersection(const vector<istream*>& files, const vector<uint64_t>& indices,const string& strminimizer){//, zstr::ofstream* out_kmer){
     string kmer_canon,skip,skip2;
     string *ref = new std::string();
     kmer curr_kmer;
@@ -260,13 +260,13 @@ void Comparator::update_colormap(const vector<istream*>& files, const vector<uin
         }
     }
     delete ref;
-    compute_scores(files,color_map,interesting_hits);
+    compute_scores(color_map,interesting_hits);
 }
 
 
 
 //TODO VERY WEIRD TO INCLUDE THE VECTOR OF FILES WHERE WE ONLY NEED THE SIZE
-void Comparator::compute_scores(const vector<istream*>& files, const ankerl::unordered_dense::map<kmer,vector<bool> >& color_map,vector<kmer>& interesting_hits){
+void Comparator::compute_scores(const ankerl::unordered_dense::map<kmer,vector<bool> >& color_map,vector<kmer>& interesting_hits){
     vector<bool> score_v;
     vector<uint32_t> ones;
     for(uint32_t i=(0);i<interesting_hits.size();++i){
@@ -328,6 +328,7 @@ void Comparator::increment_files(const vector<istream*>& files, const vector<uin
 bool Comparator::findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_vector){
     uint64_t min(-1);
     uint64_t i(0);
+    uint64_t cpt(0);
     bool result(false);
     min_vector.clear();
     for(; i < minims.size(); ++i){
@@ -337,16 +338,17 @@ bool Comparator::findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_ve
             min_vector.clear();
             min_vector.push_back(i);
             if(i<query_size){
-                result=true;
+                result=true;            
+            }
+            else{
+                result = false;
             }
         }else if(minims[i] == min){
             //NEW FILE THAT SHARE THE MINIMUM
             min_vector.push_back(i);
-            /*if(i<query_size){
+            if(i<query_size){
                 result=true;
-            }else{
-                result=false;
-            }*/
+            }
         }
     }
     if(min == (uint64_t)-1){
@@ -495,7 +497,7 @@ int main(int argc, char** argv) {
 
             cout<<"I found "<<comp.files_names.size()<<" documents"<<endl;
             auto start = std::chrono::system_clock::now();
-            comp.compare_buckets(comp.files_names.size());
+            comp.compare_sketches(comp.files_names.size());
             auto middle = std::chrono::system_clock::now();
             std::chrono::duration<double> elapsed_seconds = middle - start;
             cout<<"Comparisons lasted "<<elapsed_seconds.count()<<" sec"<<endl;
@@ -509,9 +511,9 @@ int main(int argc, char** argv) {
             Comparator comp = Comparator(p,min_threshold);
             comp.getfilesname(query,comp.files_names);
             uint query_size=comp.files_names.size();
-            cout<<"I query "<<query_size<<" files against the bank"<<endl;
+            cout<<"I query "<<query_size<<" file(s) against the bank"<<endl;
             comp.getfilesname(inputfof,comp.files_names);
-            comp.compare_buckets(query_size);
+            comp.compare_sketches(query_size);
             comp.print_containment(output_name+"_containment.csv.gz");//TODO NAME
             comp.print_jaccard(output_name+"_jaccard.csv.gz");
         }
