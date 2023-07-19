@@ -639,7 +639,7 @@ void Subsampler::print_stat()
 		cout << "This means a practical subsampling rate of " << (double)total_kmer_number / selected_kmer_number << " with duplicates" << endl;
 		cout << "This means a practical subsampling rate of " << (double)total_kmer_number / seen_kmers_at_reconstruction << " without duplicates" << endl;
 		cout << "I have seen " << intToString(total_superkmer_number) << " superkmers and I selected " << intToString(selected_superkmer_number) << " superkmers" << endl;
-		cout << "After reconstruction, I have selected " << intToString(seen_superkmers_at_reconstruction) << " superkmers" << endl;
+		cout << "After reconstruction and filtering with abundance, I have selected " << intToString(seen_superkmers_at_reconstruction) << " superkmers" << endl;
 		cout << "This means a practical subsampling rate of " << (double)total_superkmer_number / selected_superkmer_number << " with duplicates" << endl;
 		cout << "This means a practical subsampling rate of " << (double)total_superkmer_number / seen_superkmers_at_reconstruction << " without duplicates" << endl;
 		cout << "This means a mean superkmer size of " << (double)total_kmer_number / total_superkmer_number << " kmer per superkmer in the input" << endl;
@@ -671,13 +671,12 @@ int main(int argc, char **argv)
 	uint k(31);
 	uint m1(11);
 	uint c(8);
-	// TODO set at 2
 	uint abundance(1);
 	double s(1000);
 	bool verbose = true;
 	uint type(3);
 
-	while ((ch = getopt(argc, argv, "hdag:q:k:m:n:s:t:b:e:f:i:p:v:x:a:")) != -1)
+	while ((ch = getopt(argc, argv, "hdg:q:k:m:n:s:t:b:e:f:i:p:v:x:a:")) != -1)
 	{
 		switch (ch)
 		{
