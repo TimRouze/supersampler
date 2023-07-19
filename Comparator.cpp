@@ -180,6 +180,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
     kmer curr_kmer;
     ankerl::unordered_dense::map<kmer, vector<bool> > color_map;
     vector<kmer> interesting_hits;
+    string abundance;
     for(auto ind : indices){
         uint nbsuperkmer(0);
         //HERE WE READ THE MAXIMAL SUPERKMERS
@@ -190,6 +191,11 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
         files[ind]->read(ref->data(),size_buffer);
         *ref=strDecompressor(ref);
         *ref=inject_minimizer(ref,strminimizer);
+        getline(*files[ind], abundance);
+        cout << "minimizer = " << strminimizer << endl;
+        cout << "abundances = " << abundance << endl;
+        cout << "skmer = " << *ref << endl;
+        cin.get();
         if (ref->size() < k){
             *ref = "";
         }
@@ -231,6 +237,10 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
             if(skip.empty() and skip2.empty()){
                 go=false;
             }else{
+                getline(*files[ind], abundance);
+                cout << "abundances = " << abundance << endl;
+                cout << "skmer = " << skip << "+" << strminimizer << "+" << skip2 << endl;
+                cin.get();
                 nbsuperkmer++;
                 skip+=strminimizer+skip2;
                 uint64_t i(0);
