@@ -460,6 +460,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 	out_file_skmer->write(tmp.c_str(), tmp.size());
 	kmer start;
 	string to_write, skmer_str;
+	vector<uint16_t> max_skmer_abundance;
 	for (auto &minimizer : minimizer_map)
 	{
 		string minstr = num2str(minimizer.first, minimizer_size);
@@ -482,6 +483,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 				seen_max_superkmers_at_reconstruction++;
 				max_skmers += skmer_str.substr(0, k - minimizer_size);
 				max_skmers += skmer_str.substr(0 + k, k - minimizer_size);
+				max_skmer_abundance.insert(max_skmer_abundance.end(), times_seen.begin(), times_seen.end());
 			}
 			else
 			{
@@ -491,6 +493,11 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 				skmers += "\n";
 				skmers += skmer_str.substr(p + minimizer_size);
 				skmers += "\n";
+				for(auto &curr_abundance : times_seen){
+					string tmp = to_string(curr_abundance);
+					skmers += tmp;
+				}
+				skmers += "\n";
 			}
 
 			seen_superkmers_at_reconstruction++;
@@ -499,6 +506,11 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 		uint32_t size_compressed(compressed.size()); // TODO RISKY 16bit int
 		out_file_skmer->write((const char *)&size_compressed, sizeof(size_compressed));
 		out_file_skmer->write(compressed.c_str(), compressed.size());
+		for(auto &curr_abundance : max_skmer_abundance){
+			string tmp = to_string(curr_abundance);
+			out_file_skmer->write(tmp.c_str(), tmp.size());
+		}
+		out_file_skmer->write("\n", 1);
 		out_file_skmer->write(skmers.c_str(), skmers.size());
 		out_file_skmer->write("\n\n", 2);
 	}
@@ -587,7 +599,7 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 			if (not kmer_map[next].seen and kmer_map[next].count >= abundance)
 			{
 				kmer_map[next].seen = true;
-
+				times_seen.push_back(kmer_map[next].count);
 				//string k_mer(num2str(next, k) + "\n");
 				//kmers_reconstruct->write(header.c_str(), header.size());
 				//kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
@@ -603,6 +615,9 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 
 kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map){
 	//string header(">\n");
+	if(!times_seen.empty()){
+		times_seen.clear();
+	}
 	for (auto &k_mer : kmer_map)
 	{
 		if (not k_mer.second.seen and k_mer.second.count >= abundance)
@@ -610,6 +625,7 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 			total_kmer_number_at_reconstruction += k_mer.second.count;
 			seen_unique_kmers_at_reconstruction++;
 			k_mer.second.seen = true;
+			times_seen.push_back(k_mer.second.count);
 			//string to_write(num2str(k_mer.first, k) + "\n");
 			//kmers_reconstruct->write(header.c_str(), header.size());
 			//kmers_reconstruct->write(to_write.c_str(), to_write.size());

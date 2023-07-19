@@ -21,7 +21,7 @@ using namespace std;
 
 //INFO FOR KMER HASHMAP
 struct kmer_info{
-  uint8_t count;
+  uint16_t count;
   uint8_t pos_min;
   bool seen;
 }; 
@@ -60,6 +60,8 @@ class Subsampler {
     string subsampled_file;
     DecyclingSet* velo;
     map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> minimizer_map;
+    vector<uint16_t> times_seen;
+
     Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype, uint iabundance){
 		velo= new DecyclingSet(i_minimizer);
         k=ik;
