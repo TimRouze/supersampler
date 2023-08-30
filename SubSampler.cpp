@@ -460,11 +460,13 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 	out_file_skmer->write(tmp.c_str(), tmp.size());
 	kmer start;
 	string to_write, skmer_str;
+	string header(">\n");
 	vector<uint16_t> max_skmer_abundance;
+	//CAREFULL WITH ABUNDANCE, NOT SURE ABOUT BEHAVIOR IF NO NON-MAX SKMER.
 	for (auto &minimizer : minimizer_map)
 	{
 		string minstr = num2str(minimizer.first, minimizer_size);
-		out_file_skmer->write(minstr.c_str(), minimizer_size);
+		out_file_skmer->write(minstr.c_str(), minstr.size());
 		uint64_t i(0);
 		string max_skmers(""), skmers("");
 		seen_kmers_at_reconstruction += minimizer.second.size();
@@ -495,30 +497,33 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 				skmers += "\n";
 				for(auto &curr_abundance : times_seen){
 					string tmp = to_string(curr_abundance);
-					skmers += tmp;
+					skmers += tmp+" ";
 				}
 				skmers += "\n";
 			}
-
 			seen_superkmers_at_reconstruction++;
 		}
+		/* kmers_file->write(header.c_str(), header.size());
+		max_skmers += "\n";
+		kmers_file->write(max_skmers.c_str(), max_skmers.size()); */
 		string compressed(strCompressor(max_skmers));
 		uint32_t size_compressed(compressed.size()); // TODO RISKY 16bit int
 		out_file_skmer->write((const char *)&size_compressed, sizeof(size_compressed));
 		out_file_skmer->write(compressed.c_str(), compressed.size());
-		for(auto &curr_abundance : max_skmer_abundance){
-			string tmp = to_string(curr_abundance);
-			out_file_skmer->write(tmp.c_str(), tmp.size());
+		//out_file_skmer->write("\n", 1);
+		for(uint64_t i(0); i<max_skmer_abundance.size(); i++){
+			//string tmp = curr_abundance;
+			out_file_skmer->write((char*)&max_skmer_abundance[i], sizeof(max_skmer_abundance[i]));
 		}
-		out_file_skmer->write("\n", 1);
 		out_file_skmer->write(skmers.c_str(), skmers.size());
 		out_file_skmer->write("\n\n", 2);
+		max_skmer_abundance.clear();
 	}
 	actual_minimizer_number = minimizer_map.size();
 	delete input_stream;
 	delete out_file_skmer;
-	//delete kmers_file;
-	//delete kmers_reconstruct;
+	delete kmers_file;
+	delete kmers_reconstruct;
 }
 
 string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map, kmer &start, string &curr_min)
@@ -580,7 +585,7 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 	char nucs[] = {'A', 'T', 'C', 'G'};
 	kmer next = start;
 	uint64_t n;
-	//string header(">\n");
+	string header(">\n");
 	for (auto &nuc : nucs)
 	{
 		if (left)
@@ -600,9 +605,13 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 			{
 				kmer_map[next].seen = true;
 				times_seen.push_back(kmer_map[next].count);
-				//string k_mer(num2str(next, k) + "\n");
-				//kmers_reconstruct->write(header.c_str(), header.size());
-				//kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
+				/* string k_mer(num2str(next, k) + "\n");
+				kmers_reconstruct->write(header.c_str(), header.size());
+				kmers_reconstruct->write(k_mer.c_str(), k_mer.size()); */
+				/* string temp = strCompressor(num2str(next, k)); 
+				k_mer = strDecompressor(&temp) + "\n";
+				kmers_file->write(header.c_str(), header.size());
+				kmers_file->write(k_mer.c_str(), k_mer.size()); */
 				seen_unique_kmers_at_reconstruction++;
 				total_kmer_number_at_reconstruction += kmer_map[next].count;
 				return next;
@@ -614,7 +623,7 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 }
 
 kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map){
-	//string header(">\n");
+	string header(">\n");
 	if(!times_seen.empty()){
 		times_seen.clear();
 	}
@@ -626,9 +635,13 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 			seen_unique_kmers_at_reconstruction++;
 			k_mer.second.seen = true;
 			times_seen.push_back(k_mer.second.count);
-			//string to_write(num2str(k_mer.first, k) + "\n");
-			//kmers_reconstruct->write(header.c_str(), header.size());
-			//kmers_reconstruct->write(to_write.c_str(), to_write.size());
+			/* string to_write(num2str(k_mer.first, k) + "\n");
+			kmers_reconstruct->write(header.c_str(), header.size());
+			kmers_reconstruct->write(to_write.c_str(), to_write.size()); */
+			/* string temp = strCompressor(num2str(k_mer.first, k)); 
+			to_write = strDecompressor(&temp) + "\n";
+			kmers_file->write(header.c_str(), header.size());
+			kmers_file->write(to_write.c_str(), to_write.size()); */
 			return k_mer.first;
 		}
 	}
@@ -671,8 +684,8 @@ void Subsampler::print_stat()
 		cout << "Actual number of maximal skmer is: " << intToString(seen_max_superkmers_at_reconstruction) << endl;
 		cout << "Proportion of max skmers:        " << ((double)count_maximal_skmer / selected_superkmer_number) * 100 << "% with duplicate kmers" << endl;
 		cout << "Actual proportion of max skmers: " << ((double)seen_max_superkmers_at_reconstruction / seen_superkmers_at_reconstruction) * 100 << "%" << endl;
-		cout << "\n"
-			 << endl;
+		cout << "\n" << endl;
+		cout << "total nb kmer = " <<intToString(total_kmer_number_at_reconstruction) << endl;
 	}
 	else
 	{

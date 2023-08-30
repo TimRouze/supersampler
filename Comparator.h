@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <numeric>
 
 #include "include/robin_hood.h"
 #include "utils.h"
@@ -17,16 +18,16 @@ using namespace std;
 class Comparator{
     public:
         uint64_t skmer_size, k, m, nb_kmer_tot, nb_files_eof,nb_files,query_size;
-        uint64_t nb_kmer_seen,precision, sub_rate;
+        uint64_t nb_kmer_seen,precision, sub_rate, test_count;
         double min_threshold;
 
-        vector<uint64_t> minimizers, nb_kmer_seen_infile;
+        vector<uint64_t> minimizers, nb_kmer_seen_infile, square_counts;
         bool run;
         vector<string> files_names;
-        ankerl::unordered_dense::map<uint32_t, uint32_t> score_A;
-        //zstr::ofstream* kmers_comp;
+        ankerl::unordered_dense::map<uint32_t, uint64_t> score_A;
+        zstr::ofstream* out_kmer= (new zstr::ofstream("kmer_comp.fa.gz", 21, 9));
         Comparator(uint p,double mt){
-            skmer_size = m = nb_kmer_seen = nb_kmer_tot = k =nb_files= nb_files_eof= 0;
+            skmer_size = m = nb_kmer_seen = nb_kmer_tot = k =nb_files= nb_files_eof= test_count =0;
             run = true;
             precision=p;
             min_threshold=mt;
@@ -36,10 +37,10 @@ class Comparator{
         void compare_files(const string& fileofile);
         bool findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_vector);
         void increment_files(const vector<istream*>& files, const vector<uint64_t>& indices);
-        void count_intersection(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer);//, zstr::ofstream* out_kmer);
+        void count_intersection(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer, zstr::ofstream* out_kmer);
         void compare_sketches(uint size_query);
         void skip_bucket(const vector<istream*>& files,const vector<uint64_t>& indices,const string& strminimizer);//, zstr::ofstream* out_kmer);
-        void compute_scores(const ankerl::unordered_dense::map<kmer,  vector<bool>>& color_map,vector<kmer>& interesting_hits);
+        void compute_scores(const ankerl::unordered_dense::map<kmer,  vector<uint32_t>>& color_map,vector<kmer>& interesting_hits);
         void getfilesname(const string& fof, vector<string>& result);
         void get_header_info(const vector<istream*>& files);
         string inject_minimizer(const string* str, const string& minimizerstr);
