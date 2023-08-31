@@ -210,6 +210,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
     string fasta(">\n");
     string k_mer;
     for(auto ind : indices){
+        v_abundances.clear();
         uint nbsuperkmer(0);
         //HERE WE READ THE MAXIMAL SUPERKMERS
         uint32_t size_buffer=0;
@@ -224,16 +225,10 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
             *ref = "";
         }
         if (not ref->empty()){
-            uint64_t i(0), nb_kmer(0);
+            uint64_t i(0);
             uint64_t kmers_in_skmer(0);
             kmers_in_skmer = (k-m+1)*(ref->size())/(2*k-m);
-            /* if(ind == 0){
-                k_mer = *ref+"\n";
-                out_kmer->write(fasta.c_str(), fasta.size());
-                out_kmer->write(k_mer.c_str(), k_mer.size());
-            } */
             for(uint64_t i(0); i<kmers_in_skmer; i++){
-                //string tmp = curr_abundance;
                 uint16_t val(0);
                 files[ind]->read((char*)&val, sizeof(val));
                 v_abundances.push_back(val);
@@ -245,15 +240,10 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 for(uint j(0);j<k-m+1;++j){
                     updateK(curr_kmer, ref->at(i + k-1), k);
                     kmer canon=canonize(curr_kmer,k);
-                    /* if(ind == 0){
-                        k_mer = num2str(canon, k)+"\n";
-                        out_kmer->write(fasta.c_str(), fasta.size());
-                        out_kmer->write(k_mer.c_str(), k_mer.size());
-                    } */
                     // Si c'est la première fois que l'on voit le kmer
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
-                        color_map[canon].resize(files.size()+1,false);
+                        color_map[canon].resize(files.size()+1,0);
                         color_map[canon][ind]=v_abundances[cpt_abundance];
                     // Sinon
                     }else{
@@ -266,10 +256,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
                                 color_map[canon][files.size()]=v_abundances[cpt_abundance];
-                            }/* else if(ind != 0){
-                                cout << color_map[canon][files.size()] << endl;
-                                cin.get();
-                            }  */
+                            }
                         }
                     }
                     i++;
@@ -277,6 +264,10 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 }
                 nbsuperkmer++;
                 i +=k-1;
+            }
+            if(v_abundances.size() != cpt_abundance){
+                cout << v_abundances.size() << endl;
+                cout << cpt_abundance << endl;
             }
         }
         //HERE WE READ THE NONMAXIMAL SUPERKMERS
@@ -316,7 +307,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                     // Si c'est la première fois que l'on voit le kmer
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
-                        color_map[canon].resize(files.size()+1,false);
+                        color_map[canon].resize(files.size()+1,0);
                         color_map[canon][ind]=v_abundances[cpt_abundance];
                     // Sinon
                     }else{ 
@@ -327,14 +318,13 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                             if(not color_map[canon][files.size()]){
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
-                                //color_map[canon][files.size()]=v_abundances[cpt_abundance];
-                            } 
+                                color_map[canon][files.size()]=v_abundances[cpt_abundance];
+                            }
                         }
                     }
                     i++;
                     cpt_abundance++;
                 }
-                
             }
         }
     }
@@ -350,9 +340,7 @@ void Comparator::compute_scores(const ankerl::unordered_dense::map<kmer,vector<u
     for(uint32_t z=(0);z<interesting_hits.size();++z){
         // On récupère l'abondance du k-mer pour chaque fichier
         score_v = color_map.at(interesting_hits[z]);
-        /* for(auto elem: score_v){
-            cout << intToString(elem) << " ";
-        } */
+        //cout << num2str(interesting_hits[z], k) << endl;
         ones.clear();
         // Simplement pour parcourir la map
         for(uint32_t x(0);x<nb_files;++x){
