@@ -503,16 +503,11 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 			}
 			seen_superkmers_at_reconstruction++;
 		}
-		/* kmers_file->write(header.c_str(), header.size());
-		max_skmers += "\n";
-		kmers_file->write(max_skmers.c_str(), max_skmers.size()); */
 		string compressed(strCompressor(max_skmers));
 		uint32_t size_compressed(compressed.size()); // TODO RISKY 16bit int
 		out_file_skmer->write((const char *)&size_compressed, sizeof(size_compressed));
 		out_file_skmer->write(compressed.c_str(), compressed.size());
-		//out_file_skmer->write("\n", 1);
 		for(uint64_t i(0); i<max_skmer_abundance.size(); i++){
-			//string tmp = curr_abundance;
 			out_file_skmer->write((char*)&max_skmer_abundance[i], sizeof(max_skmer_abundance[i]));
 		}
 		out_file_skmer->write(skmers.c_str(), skmers.size());
@@ -605,13 +600,13 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 			{
 				kmer_map[next].seen = true;
 				times_seen.push_back(kmer_map[next].count);
-				/* string k_mer(num2str(next, k) + "\n");
+				string k_mer(num2str(next, k) + "\n");
 				kmers_reconstruct->write(header.c_str(), header.size());
-				kmers_reconstruct->write(k_mer.c_str(), k_mer.size()); */
-				/* string temp = strCompressor(num2str(next, k)); 
+				kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
+				string temp = strCompressor(num2str(next, k)); 
 				k_mer = strDecompressor(&temp) + "\n";
 				kmers_file->write(header.c_str(), header.size());
-				kmers_file->write(k_mer.c_str(), k_mer.size()); */
+				kmers_file->write(k_mer.c_str(), k_mer.size());
 				seen_unique_kmers_at_reconstruction++;
 				total_kmer_number_at_reconstruction += kmer_map[next].count;
 				return next;
@@ -635,13 +630,13 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 			seen_unique_kmers_at_reconstruction++;
 			k_mer.second.seen = true;
 			times_seen.push_back(k_mer.second.count);
-			/* string to_write(num2str(k_mer.first, k) + "\n");
+			string to_write(num2str(k_mer.first, k) + "\n");
 			kmers_reconstruct->write(header.c_str(), header.size());
-			kmers_reconstruct->write(to_write.c_str(), to_write.size()); */
-			/* string temp = strCompressor(num2str(k_mer.first, k)); 
+			kmers_reconstruct->write(to_write.c_str(), to_write.size());
+			string temp = strCompressor(num2str(k_mer.first, k)); 
 			to_write = strDecompressor(&temp) + "\n";
 			kmers_file->write(header.c_str(), header.size());
-			kmers_file->write(to_write.c_str(), to_write.size()); */
+			kmers_file->write(to_write.c_str(), to_write.size());
 			return k_mer.first;
 		}
 	}
