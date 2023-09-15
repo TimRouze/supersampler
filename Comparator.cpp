@@ -233,6 +233,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 files[ind]->read((char*)&val, sizeof(val));
                 v_abundances.push_back(val);
                 nb_kmer_seen_infile[ind] += val*val;
+                //abund_tot += val;
             }
             while((i + k) <= ref->size()){
                 curr_kmer = str2num(ref->substr(i, k-1));
@@ -294,6 +295,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 while (getline(abundance, val, ' ')) {
                     v_abundances.push_back(stoi(val));
                     nb_kmer_seen_infile[ind] += stoi(val)*stoi(val);
+                    //abund_tot += stoi(val);
                 }
                 curr_kmer = str2num(skip.substr(0, k-1));
                 while(i+k <= skip.size()){
@@ -355,21 +357,11 @@ void Comparator::compute_scores(const ankerl::unordered_dense::map<kmer,vector<u
         for(uint64_t i(0); i < ones.size(); ++i){
             for(uint64_t j(i+1); j < ones.size(); ++j){
                 score_A[ones[i]*nb_files+ones[j]] += (score_v[i]*score_v[j]);
-                //score_A[i] += pow(score_v[i], 2);
-                //score_A[ones[i]*(nb_files+ones[j])+nb_files] += pow(score_v[j], 2);
-                //cin.get();
+                //PB HERE, SCORE_V[I] DOES NOT CONTAIN EVERY ABUNDANCE QUESTION IS WHY
+                abund_tot += score_v[i];
             }
         }
     }
-    /* if(score_A[0*nb_files+1] != nb_kmer_seen_infile[0]){
-        cout << score_A[0*nb_files+1] << endl;
-        cout << score_A[0*nb_files+2] << endl;
-        cout << score_A[1*nb_files+2] << endl;
-        cout << nb_kmer_seen_infile[0] << endl;
-        cout << nb_kmer_seen_infile[1] << endl;
-        cout << nb_kmer_seen_infile[2] << endl;
-        cin.get();  
-    }  */
 }
 
 
@@ -524,6 +516,7 @@ void Comparator::print_jaccard(const string& outfile){
                 }else{
                     cout<<"Inter:"<<intToString(score_A[i*nb_files+j])<<" Union:"<<intToString(sqrt((double)nb_kmer_seen_infile[i]*nb_kmer_seen_infile[j]))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
                     //double score=(double)score_A[i*nb_files+j]/(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]);
+                    cout << intToString(abund_tot) << endl;
                     double score = (double)score_A[i*nb_files+j]/sqrt((double)nb_kmer_seen_infile[i]*nb_kmer_seen_infile[j]);
                     if(score<min_threshold){
                         out<<'0';

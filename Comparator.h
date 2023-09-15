@@ -26,11 +26,13 @@ class Comparator{
         vector<string> files_names;
         ankerl::unordered_dense::map<uint32_t, uint64_t> score_A;
         zstr::ofstream* out_kmer= (new zstr::ofstream("kmer_comp.fa.gz", 21, 9));
+        uint64_t abund_tot;
         Comparator(uint p,double mt){
             skmer_size = m = nb_kmer_seen = nb_kmer_tot = k =nb_files= nb_files_eof= test_count =0;
             run = true;
             precision=p;
             min_threshold=mt;
+            abund_tot = 0;
         }
         void print_containment(const string& outfile);
         void print_jaccard(const string& outfile);
