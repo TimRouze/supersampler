@@ -40,6 +40,7 @@ class Subsampler {
     uint type;
     zstr::ofstream* kmers_file;
     zstr::ofstream* kmers_reconstruct;
+    bool jaccard_only,log_abundance,super_abundance;
     //VARIABLES
     uint64_t total_kmer_number;
     uint64_t cursed_kmer_number;
@@ -62,8 +63,13 @@ class Subsampler {
     map<uint32_t, ankerl::unordered_dense::map<kmer, kmer_info>> minimizer_map;
     vector<uint16_t> times_seen;
 
-    Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype, uint iabundance){
+
+
+    Subsampler(uint64_t ik, uint64_t i_minimizer,double isubsampling_rate,uint64_t icore, uint itype, uint iabundance,bool  ijaccardonly,bool ilogabundance, bool isuperabundance){
 		velo= new DecyclingSet(i_minimizer);
+        jaccard_only=ijaccardonly;
+        log_abundance=ilogabundance;
+        super_abundance=isuperabundance;
         k=ik;
         abundance = iabundance;
         minimizer_size=i_minimizer;
@@ -99,8 +105,6 @@ class Subsampler {
     void handle_superkmer(string& superkmer,kmer input_minimizer, bool inputrev,uint64_t position);
     uint64_t get_minimizer_multiple(kmer seq, uint64_t &position,bool &is_rev, bool& is_multiple);
     uint64_t get_minimizer_stranded(kmer seq, uint64_t &position,uint64_t &hashmini);
-
-
     string reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, kmer& start, string& curr_min);
     kmer find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map);
     kmer find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_info>& kmer_map, bool left);

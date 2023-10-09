@@ -22,7 +22,7 @@ class Comparator{
         double min_threshold;
 
         vector<uint64_t> minimizers, nb_kmer_seen_infile, square_counts;
-        bool run;
+        bool run,log_abundance,jaccard_only,super_abundance;
         vector<string> files_names;
         ankerl::unordered_dense::map<uint32_t, uint64_t> score_A;
         zstr::ofstream* out_kmer= (new zstr::ofstream("kmer_comp.fa.gz", 21, 9));

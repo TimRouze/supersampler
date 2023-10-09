@@ -304,6 +304,18 @@ void Subsampler::handle_superkmer(string &superkmer, kmer input_minimizer, bool 
 }
 
 
+void smooth(vector<uint16_t>& times_seen){
+	uint64_t sum(0);
+	for(auto &curr_abundance : times_seen){
+		sum+=curr_abundance;
+	}
+	sum/=times_seen.size();
+	for(auto &curr_abundance : times_seen){
+		curr_abundance=sum;
+	}
+}
+
+
 
 
 //  RENAME IN SUBSAMPLE ?
@@ -460,7 +472,13 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 		}
 	}
 	nb_mmer_selected -= minimizer_size - 1;
-	tmp = to_string(k - 1 + max_superkmer_size) + " " + to_string(minimizer_size) + " " + to_string(selected_kmer_number) + " " + to_string(subsampling_rate) + "\n";
+	tmp = to_string(k - 1 + max_superkmer_size) + " " 
+	+ to_string(minimizer_size) + " " 
+	+ to_string(selected_kmer_number) + " " 
+	+ to_string(subsampling_rate)+" "
+	+to_string(jaccard_only)+" "
+	+to_string(super_abundance)+" " 
+	+to_string(log_abundance) + "\n";
 	out_file_skmer->write(tmp.c_str(), tmp.size());
 	kmer start;
 	string to_write, skmer_str;
@@ -483,12 +501,16 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 			}
 
 			skmer_str = reconstruct_superkmer(minimizer.second, start, minstr);
+			if(super_abundance and not jaccard_only){
+				smooth(times_seen);
+			}
 			if (skmer_str.size() == (k * 2 - minimizer_size))
 			{
 				i += (k - minimizer_size + 1);
 				seen_max_superkmers_at_reconstruction++;
 				max_skmers += skmer_str.substr(0, k - minimizer_size);
 				max_skmers += skmer_str.substr(0 + k, k - minimizer_size);
+				
 				max_skmer_abundance.insert(max_skmer_abundance.end(), times_seen.begin(), times_seen.end());
 			}
 			else
@@ -607,7 +629,14 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 			if (not kmer_map[next].seen and kmer_map[next].count >= abundance)
 			{
 				kmer_map[next].seen = true;
-				times_seen.push_back(kmer_map[next].count);
+				if(jaccard_only){
+					// times_seen.push_back(1);
+					}else if(log_abundance){
+					times_seen.push_back(log2(kmer_map[next].count));
+				}else{
+					times_seen.push_back(kmer_map[next].count);
+				}
+				
 				string k_mer(num2str(next, k) + "\n");
 				kmers_reconstruct->write(header.c_str(), header.size());
 				kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
@@ -629,7 +658,7 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 
 kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map){
 	string header(">\n");
-	if(!times_seen.empty()){
+	if( not times_seen.empty()){
 		times_seen.clear();
 	}
 	for (auto &k_mer : kmer_map)
@@ -639,7 +668,13 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 			total_kmer_number_at_reconstruction += k_mer.second.count;
 			seen_unique_kmers_at_reconstruction++;
 			k_mer.second.seen = true;
-			times_seen.push_back(k_mer.second.count);
+			if(jaccard_only){
+				// times_seen.push_back(1);
+			}else if(log_abundance){
+				times_seen.push_back(log2(k_mer.second.count));
+			}else{
+				times_seen.push_back(k_mer.second.count);
+			}
 			string to_write(num2str(k_mer.first, k) + "\n");
 			kmers_reconstruct->write(header.c_str(), header.size());
 			kmers_reconstruct->write(to_write.c_str(), to_write.size());
@@ -713,10 +748,10 @@ int main(int argc, char **argv)
 	uint c(8);
 	uint abundance(1);
 	double s(1000);
-	bool verbose = true;
+	bool verbose(false),jaccard_only(false),log_abundance(false),grouped_abundance(false);
 	uint type(3);
 
-	while ((ch = getopt(argc, argv, "hdg:q:k:m:n:s:t:b:e:f:i:p:v:x:a:")) != -1)
+	while ((ch = getopt(argc, argv, "hdq:k:m:n:s:t:b:e:f:i:p:v:x:a:jlg")) != -1)
 	{
 		switch (ch)
 		{
@@ -750,6 +785,15 @@ int main(int argc, char **argv)
 		case 'a':
 			abundance = stoi(optarg);
 			break;
+		case 'j':
+			jaccard_only = true;
+			break;
+		case 'l':
+			log_abundance = true;
+			break;
+		case 'g':
+			grouped_abundance = true;
+			break;
 		}
 	}
 	if ((input == "" && inputfof == ""))
@@ -763,8 +807,11 @@ int main(int argc, char **argv)
 			 << "	-t Threads used  (8) " << endl
 			 << "	-m Minimizer size used  (11, max value is 15) " << endl
 			 << "	-v Verbose level (1) " << endl
-			 << "	-a Abundance min (2) " << endl
-			 << "	-3/2/1 respectively Max skmers + any sized skmers + cursed skmers OR Max skmers and any sized skmers OR max skmers only. (default 3) " << endl;
+			 << "	-a Abundance min (1) " << endl
+			 << " 	-j Jaccard only (False, cosine distance is used) " << endl
+			 <<	" 	-l Store Log abundance (False, exact abundance are stored) " << endl
+			 <<	" 	-g Store grouped abundance per superkmer (False, one counter per kmer is stored) " << endl;
+			//  << "	-3/2/1 respectively Max skmers + any sized skmers + cursed skmers OR Max skmers and any sized skmers OR max skmers only. (default 3) " << endl;
 		return 0;
 	}
 	else
@@ -788,7 +835,7 @@ int main(int argc, char **argv)
 		cout << "Maximal super kmer are of length " << 2 * k - m1 << " or " << k - m1 + 1 << " kmers" << endl;
 		if (input != "")
 		{
-			Subsampler ss(k, m1, s, c, type, abundance);
+			Subsampler ss(k, m1, s, c, type, abundance,jaccard_only,log_abundance,grouped_abundance);
 			ss.parse_fasta_test(input, output);
 			if (verbose)
 			{
@@ -824,7 +871,7 @@ int main(int argc, char **argv)
 							cout << curr_filename << endl;
 							out_fof << get_out_name(curr_filename, output) + ".gz\n";
 						}
-						Subsampler ss(k, m1, s, c, type, abundance);
+						Subsampler ss(k, m1, s, c, type, abundance,jaccard_only,log_abundance,grouped_abundance);
 						ss.parse_fasta_test(curr_filename, output);
 						if (verbose)
 						{

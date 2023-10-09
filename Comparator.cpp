@@ -20,6 +20,8 @@ void Comparator::getfilesname(const string& fileofile, vector<string>& result){
     }
 }
 
+
+
 void Comparator::get_header_info(const vector<istream*>& files){
     string header;
     for(uint64_t f = 0; f < files.size(); ++f){
@@ -30,11 +32,19 @@ void Comparator::get_header_info(const vector<istream*>& files){
         header.erase(0, header.find(" ") + 1);
         nb_kmer_tot = stoi(header.substr(0, header.find(" ")));
         header.erase(0, header.find(" ") + 1);
-        sub_rate = stoi(header);
+        sub_rate = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        jaccard_only = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        super_abundance = stoi(header.substr(0, header.find(" ")));
+        header.erase(0, header.find(" ") + 1);
+        log_abundance = stoi(header);
         k = ((skmer_size + m)/2); //-m
         skmer_size-=m;
     }
 }
+
+
 
 void Comparator::compare_sketches(uint size_query){
     query_size=size_query;
@@ -95,6 +105,7 @@ string Comparator::inject_minimizer(const string* str, const string& minimizerst
 }
 
 
+
 //TODO ADD NB KMER IN SKETCH HEADER + ONLY READ THE LINES WITHOUT ACTUALLY READING KMERS
 //NO COMPARISON TO DO IN THIS BUCKET BUT WE STILL HAVE TO COUNT THE AMOUNT OF KMERS
 void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_t>& indices,const string& strminimizer){//, zstr::ofstream* out_kmer){
@@ -112,34 +123,36 @@ void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_
         skip->resize(size_buffer);
         files[ind]->read(skip->data(),size_buffer);
         *skip=strDecompressor(skip);
-        *skip=inject_minimizer(skip,strminimizer);
+        // *skip=inject_minimizer(skip,strminimizer);
         getline(*files[ind], tmp);
-        /* cout << "minimizer = " << strminimizer << endl;
-        cout << "abundances = " << tmp << endl;
-        cout << "skmer = " << *skip << endl;
-        cin.get(); */
-        if (skip->size() < k) {
+        if (skip->size() < k-m) {
             *skip = "";
         }
         if (not skip->empty()){
-            stringstream abundance(tmp);
-            while (getline(abundance, val, ' ')) {
-                //v_abundances.push_back(stoi(val));
-                nb_kmer_seen_infile[ind] += stoi(val);
-            }
-            /*uint64_t i(0);
-            //HERE WE READ THE MAXIMALSUPERKMERS
-            while((i+k) <= skip->size()){
-                curr_kmer = str2num(skip->substr(i, k-1));
-                //TO PRINT
-                for(uint j(0);j<k-m+1;++j){
-                    updateK(curr_kmer, skip->at(i+k-1), k);
-                    kmer canon=canonize(curr_kmer,k);
-                    skip_map.insert(canon);
-                    i++;
+            if(jaccard_only){
+                nb_kmer_seen_infile[ind] += size_buffer/(2*k-m+1);//TODO check
+            }else if(super_abundance){
+                stringstream abundance(tmp);
+                while (getline(abundance, val, ' ')) {
+                    //v_abundances.push_back(stoi(val));
+                    if(log_abundance){
+                        uint64_t ival=(uint64_t)1 << stoi(val);
+                        nb_kmer_seen_infile[ind] += (k-m+1)*ival*ival;
+                    }else{
+                        uint64_t ival=stoi(val);
+                        nb_kmer_seen_infile[ind] += (k-m+1)*ival*ival;
+                    }
                 }
-                i+=k-1;
-            }*/
+            }else{
+                stringstream abundance(tmp);
+                while (getline(abundance, val, ' ')) {
+                    uint64_t ival=stoi(val);
+                    if(log_abundance){
+                        uint64_t ival=(uint64_t)1 << stoi(val);
+                    }
+                    nb_kmer_seen_infile[ind] += ival*ival;
+                }
+            }
         }
         //HERE WE READ THE NONMAXIMAL SUPERKMERS
         bool go=true;
@@ -150,29 +163,30 @@ void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_
             if(skip1.empty() and skip2.empty()){
                 go=false;
             }else{
-                getline(*files[ind], tmp);
-                stringstream abundance(tmp);
-                while (getline(abundance, val, ' ')) {
-                    //v_abundances.push_back(stoi(val));
-                    nb_kmer_seen_infile[ind] += stoi(val);
-
+                if(jaccard_only){
+                    nb_kmer_seen_infile[ind] += skip1.size()+skip2.size()-k+m+1;//TODO CHECK
+                }else if(super_abundance){
+                    getline(*files[ind], tmp);
+                    uint64_t ival=stoi(tmp);
+                    if(log_abundance){
+                        ival=(uint64_t)1 << ival;
+                    }
+                    nb_kmer_seen_infile[ind] += ival*ival*(skip1.size()+skip2.size()-k+m+1);//TODO CHECK
+                }else{
+                    getline(*files[ind], tmp);
+                    stringstream abundance(tmp);
+                    while (getline(abundance, val, ' ')) {
+                        uint64_t ival=stoi(val);
+                        if(log_abundance){
+                            ival=(uint64_t)1 << ival;
+                        }
+                        //v_abundances.push_back(stoi(val));
+                        nb_kmer_seen_infile[ind] += ival*ival;
+                    }
                 }
-               /*  cout << "abundances = " << tmp << endl;
-                cout << "skmer = " << skip1 << "+" << strminimizer << "+" << skip2 << endl;
-                cin.get();
-                skip1+=strminimizer+skip2;
-                curr_kmer = str2num(skip1.substr(0, k-1));
-                uint64_t i(0);
-                while(i+k <= skip1.size()){
-                    updateK(curr_kmer, skip1[i + k-1], k);
-                    kmer canon=canonize(curr_kmer,k);
-                    skip_map.insert(canon);
-                    ++i;
-                }*/
             }
 
         }
-        //nb_kmer_seen_infile[ind] += skip_map.size();
         skip_map.clear();
     }
     delete skip;
@@ -221,20 +235,39 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
         *ref=strDecompressor(ref); 
         *ref=inject_minimizer(ref,strminimizer);
         uint64_t cpt_abundance(0);
-        if (ref->size() < k){
+        if (ref->size() < k-m){
             *ref = "";
         }
         if (not ref->empty()){
             uint64_t i(0);
             uint64_t kmers_in_skmer(0);
             kmers_in_skmer = (k-m+1)*(ref->size())/(2*k-m);
-            for(uint64_t i(0); i<kmers_in_skmer; i++){
-                uint16_t val(0);
-                files[ind]->read((char*)&val, sizeof(val));
-                v_abundances.push_back(val);
-                nb_kmer_seen_infile[ind] += val*val;
-                //abund_tot += val;
+            if(jaccard_only){
+                nb_kmer_seen_infile[ind] += kmers_in_skmer;
+            }else if(super_abundance){
+                for(uint64_t i(0); i<(ref->size())/(2*k-m); i++){
+                    uint16_t val(0);
+                    files[ind]->read((char*)&val, sizeof(val));
+                    if(log_abundance){
+                        val=(uint64_t)1 << val;
+                    }
+                    for(uint64_t j(0);j<k-m+1;++j){
+                        v_abundances.push_back(val);
+                        nb_kmer_seen_infile[ind] += val*val;
+                    }
+                }
+            }else{
+                for(uint64_t i(0); i<kmers_in_skmer; i++){
+                    uint16_t val(0);
+                    files[ind]->read((char*)&val, sizeof(val));
+                    if(log_abundance){
+                        val=(uint64_t)1 << val;
+                    }
+                    v_abundances.push_back(val);
+                    nb_kmer_seen_infile[ind] += val*val;
+                }
             }
+           
             while((i + k) <= ref->size()){
                 curr_kmer = str2num(ref->substr(i, k-1));
                 //Quand la longueur du skmer est atteinte, on saute de k-1 nucleotide pour aller au skmer suivant.
@@ -249,7 +282,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                     // Sinon
                     }else{
                         //Si c'est la première fois que l'on voit ce k-mer pour ce fichier
-                        if(not color_map[canon][ind]){
+                        if(color_map[canon][ind]==0){
                             // On ajoute à la case du fichier l'abondance correspondante.
                             color_map[canon][ind]=v_abundances[cpt_abundance];
                             // Si c'est au moins la seconde fois qu'on voit ce kmer
@@ -266,10 +299,6 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 nbsuperkmer++;
                 i +=k-1;
             }
-            if(v_abundances.size() != cpt_abundance){
-                cout << v_abundances.size() << endl;
-                cout << cpt_abundance << endl;
-            }
         }
         //HERE WE READ THE NONMAXIMAL SUPERKMERS
         bool go=true;
@@ -281,11 +310,6 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
             }else{
                 nbsuperkmer++;
                 skip+=strminimizer+skip2;
-                /* if(ind == 0){
-                    k_mer = skip+"\n";
-                    out_kmer->write(fasta.c_str(), fasta.size());
-                    out_kmer->write(k_mer.c_str(), k_mer.size());
-                } */
                 uint64_t i(0);
                 getline(*files[ind], tmp);
                 
@@ -301,11 +325,6 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 while(i+k <= skip.size()){
                     updateK(curr_kmer, skip[i + k-1 ], k);
                     kmer canon=canonize(curr_kmer,k);
-                    /* if(ind == 0){
-                        k_mer = num2str(canon, k)+"\n";
-                        out_kmer->write(fasta.c_str(), fasta.size());
-                        out_kmer->write(k_mer.c_str(), k_mer.size());
-                    } */
                     // Si c'est la première fois que l'on voit le kmer
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
@@ -313,6 +332,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                         color_map[canon][ind]=v_abundances[cpt_abundance];
                     // Sinon
                     }else{ 
+                        
                         // On ajoute à la case du fichier l'abondance correspondante.
                         if(not color_map[canon][ind]){
                             color_map[canon][ind]=v_abundances[cpt_abundance];
@@ -342,17 +362,16 @@ void Comparator::compute_scores(const ankerl::unordered_dense::map<kmer,vector<u
     for(uint32_t z=(0);z<interesting_hits.size();++z){
         // On récupère l'abondance du k-mer pour chaque fichier
         score_v = color_map.at(interesting_hits[z]);
-        //cout << num2str(interesting_hits[z], k) << endl;
         ones.clear();
         // Simplement pour parcourir la map
         for(uint32_t x(0);x<nb_files;++x){
-            if(score_v[x]){
+            if(score_v[x]!=0){
                 ones.push_back(x);
             }
         }
         // Ici, on va a chaque emplacements de la matrice (applatie) pour y ajouter le produit des abondances 
         // des deux sketches courants.
-        //E.G. pour les sketches 1 et 2 en ayant 5 fichiers, on va a la case score_A[1*5+2] soit 7 pour y ajouter le produit
+        //E.G. pour les sketches 1 et 2 en ayant 5 fichiers, on va a la case score_a[1*5+2] soit 7 pour y ajouter le produit
         // d'abondance correspondant.
         for(uint64_t i(0); i < ones.size(); ++i){
             for(uint64_t j(i+1); j < ones.size(); ++j){
@@ -375,7 +394,6 @@ void Comparator::increment_files(const vector<istream*>& files, const vector<uin
         for(uint64_t i(0); i < indices.size(); ++i){
             if(not files[indices[i]]->eof()){
                 files[indices[i]]->read(buffer.data(),m);
-                //~ cout<<"buffer"<<buffer<<endl;
                 if(not files[indices[i]]->eof()){
                     minimizers[indices[i]] = (uint64_t)str2num(buffer);
                 }else{
@@ -437,6 +455,7 @@ bool Comparator::findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_ve
 }
 
 
+
 void Comparator::print_containment(const string& outfile){
     zstr::ofstream out(outfile,21,1);
     cout << "Containement index dump " << endl;
@@ -457,10 +476,6 @@ void Comparator::print_containment(const string& outfile){
                 if(score_A.count(i*nb_files+j)==0){
                     out<<"0";
                 }else{
-                    /* cout << "nb_kmer_seen_infile " << i << " = " << intToString(nb_kmer_seen_infile[i]) << endl;
-                    cout << "intersection = " << intToString(score_A[i*nb_files+j]) << endl;
-                    cout << "result = " << (double)score_A[i*nb_files+j]/nb_kmer_seen_infile[i] << endl;
-                    cin.get(); */
                     double score=(double)score_A[i*nb_files+j]/nb_kmer_seen_infile[i];
                     if(score<min_threshold){
                         out<<'0';
@@ -472,10 +487,6 @@ void Comparator::print_containment(const string& outfile){
                 if(score_A.count(j*nb_files+i)==0){
                     out<<"0";
                 }else{
-                    /* cout << "nb_kmer_seen_infile " << i << " = " << intToString(nb_kmer_seen_infile[i]) << endl;
-                    cout << "intersection = " << intToString(score_A[j*nb_files+i]) << endl;
-                    cout << "result = " << (double)score_A[j*nb_files+i]/nb_kmer_seen_infile[i] << endl;
-                    cin.get(); */
                     double score=(double)score_A[j*nb_files+i]/nb_kmer_seen_infile[i];
                     if(score<min_threshold){
                         out<<'0';
@@ -515,7 +526,6 @@ void Comparator::print_jaccard(const string& outfile){
                     out<<"0";
                 }else{
                     cout<<"Inter:"<<intToString(score_A[i*nb_files+j])<<" Union:"<<intToString(sqrt((double)nb_kmer_seen_infile[i]*nb_kmer_seen_infile[j]))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
-                    //double score=(double)score_A[i*nb_files+j]/(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]);
                     cout << intToString(abund_tot) << endl;
                     double score = (double)score_A[i*nb_files+j]/sqrt((double)nb_kmer_seen_infile[i]*nb_kmer_seen_infile[j]);
                     if(score<min_threshold){
@@ -528,9 +538,6 @@ void Comparator::print_jaccard(const string& outfile){
                 if(score_A.count(j*nb_files+i)==0){
                     out<<"0";
                 }else{
-                    //cout<<"Inter:"<<intToString(score_A[i*nb_files+j])<<" Union:"<<intToString((nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[i*nb_files+j]))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
-                    //double score=(double)score_A[j*nb_files+i]/(nb_kmer_seen_infile[i] + nb_kmer_seen_infile[j] - score_A[j*nb_files+i]);
-                    //double score = (double)score_A[j*nb_files+i]/(nb_kmer_seen_infile[i]*nb_kmer_seen_infile[j]);
                     double score = (double)score_A[j*nb_files+i]/sqrt((double)nb_kmer_seen_infile[j]*nb_kmer_seen_infile[i]);
                     if(score<min_threshold){
                         out<<'0';
