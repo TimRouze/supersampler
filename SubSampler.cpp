@@ -506,7 +506,6 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 				seen_max_superkmers_at_reconstruction++;
 				max_skmers += skmer_str.substr(0, k - minimizer_size);
 				max_skmers += skmer_str.substr(0 + k, k - minimizer_size);
-				
 				max_skmer_abundance.insert(max_skmer_abundance.end(), times_seen.begin(), times_seen.end());
 			}
 			else
