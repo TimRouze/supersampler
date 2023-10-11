@@ -193,8 +193,7 @@ uint64_t Subsampler::regular_minimizer_pos(kmer seq, uint64_t &position, bool &i
 
 
 
-string extract_name(const string &str)
-{
+string extract_name(const string &str){
 	string result;
 	uint64_t begin(0);
 	for (uint i(0); i < str.size(); ++i)
@@ -220,8 +219,7 @@ string extract_name(const string &str)
 
 
 
-string get_out_name(const string &str, const string &prefix)
-{
+string get_out_name(const string &str, const string &prefix){
 	string result, path;
 	uint64_t begin(0);
 	path = "";
@@ -249,8 +247,7 @@ string get_out_name(const string &str, const string &prefix)
 
 
 
-void Subsampler::handle_superkmer(string &superkmer, kmer input_minimizer, bool inputrev,uint64_t position_min)
-{
+void Subsampler::handle_superkmer(string &superkmer, kmer input_minimizer, bool inputrev,uint64_t position_min){
 	selected_superkmer_number++;
 	if (inputrev)
 	{
@@ -310,9 +307,8 @@ void smooth(vector<uint16_t>& times_seen){
 		sum+=curr_abundance;
 	}
 	sum/=times_seen.size();
-	for(auto &curr_abundance : times_seen){
-		curr_abundance=sum;
-	}
+	times_seen.clear();
+	times_seen.push_back(sum);
 }
 
 
@@ -530,12 +526,15 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 			seen_superkmers_at_reconstruction++;
 		}
 		string compressed(strCompressor(max_skmers));
-		uint32_t size_compressed(compressed.size()); // TODO RISKY 16bit int
+		uint32_t size_compressed(compressed.size());
 		out_file_skmer->write((const char *)&size_compressed, sizeof(size_compressed));
 		out_file_skmer->write(compressed.c_str(), compressed.size());
-		for(uint64_t i(0); i<max_skmer_abundance.size(); i++){
-			out_file_skmer->write((char*)&max_skmer_abundance[i], sizeof(max_skmer_abundance[i]));
+		// cout<<"max_skmers abundance:"<<max_skmer_abundance.size()<<endl;;
+		// for(uint64_t i(0); i<max_skmer_abundance.size(); i++){
+		if(not jaccard_only){
+			out_file_skmer->write((char*)&max_skmer_abundance[0], max_skmer_abundance.size()*sizeof(max_skmer_abundance[0]));
 		}
+		// }
 		out_file_skmer->write(skmers.c_str(), skmers.size());
 		out_file_skmer->write("\n\n", 2);
 		max_skmer_abundance.clear();
@@ -549,8 +548,7 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 
 
 
-string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map, kmer &start, string &curr_min)
-{
+string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map, kmer &start, string &curr_min){
 	string result_skmer;
 	string superkmer = num2str(start, k);
 	uint64_t n_left((k - minimizer_size) - kmer_map[start].pos_min), n_right(kmer_map[start].pos_min);
@@ -605,8 +603,7 @@ string Subsampler::reconstruct_superkmer(ankerl::unordered_dense::map<kmer, kmer
 
 
 
-kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map, bool left)
-{
+kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_info> &kmer_map, bool left){
 	char nucs[] = {'A', 'T', 'C', 'G'};
 	kmer next = start;
 	uint64_t n;
@@ -690,8 +687,7 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 
 
 
-uint64_t Subsampler::compute_threshold(double sampling_rate)
-{
+uint64_t Subsampler::compute_threshold(double sampling_rate){
 	// UNCOMMENT THIS LINE TO HAVE THE SAME THRESHOLD AS SOURMASH
 	// return (uint64_t)((pow(2, 64)-1)/sampling_rate);
 	uint64_t mmerinkmer(k - minimizer_size + 1);
