@@ -324,6 +324,11 @@ kmer hash64shift(kmer key) {
 }
 
 
+bool fileExists(const std::string& filename) {
+    std::ifstream file(filename.c_str());
+    return file.is_open();
+}
+
 
 void cat_stream(istream& is, ostream& os) {
 	const streamsize buff_size = 1 << 16;
@@ -355,6 +360,10 @@ struct stat STATbuffer;
 
 
 zstr::ifstream* openFile(const string& input_file){
+	if(not fileExists(input_file)){
+		cout << "File " << input_file << " does not exist" << endl;
+		return NULL;
+	}
 	zstr::ifstream* input_stream = new zstr::ifstream(input_file);
 	if(not input_stream-> good()){
 		cout << "Problem with file opening" << endl;
