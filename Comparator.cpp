@@ -690,7 +690,7 @@ int main(int argc, char** argv) {
             comp.print_containment(output_name+"_containment.csv.gz");//TODO NAME
             comp.print_jaccard(output_name+"_jaccard.csv.gz");
             if(not comp.jaccard_only){
-                comp.print_weighted_jaccard(output_name+"_cosine.csv.gz");
+                comp.print_weighted_jaccard(output_name+"_angular.csv.gz");
             }
 
             auto end = std::chrono::system_clock::now();
