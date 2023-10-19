@@ -21,10 +21,11 @@ class Comparator{
         uint64_t nb_kmer_seen,precision, sub_rate, test_count;
         double min_threshold;
 
-        vector<uint64_t> minimizers, nb_kmer_seen_infile, square_counts;
+        vector<uint64_t> minimizers, nb_kmer_seen_infile,nb_kmer_seen_infile_ab, square_counts;
         bool run,log_abundance,jaccard_only,super_abundance;
         vector<string> files_names;
-        ankerl::unordered_dense::map<uint32_t, uint64_t> score_A;
+        ankerl::unordered_dense::map<uint32_t, pair<uint64_t,uint64_t> > score_A;
+
         zstr::ofstream* out_kmer= (new zstr::ofstream("kmer_comp.fa.gz", 21, 9));
         uint64_t abund_tot;
         Comparator(uint p,double mt){
@@ -36,6 +37,7 @@ class Comparator{
         }
         void print_containment(const string& outfile);
         void print_jaccard(const string& outfile);
+        void print_weighted_jaccard(const string& outfile);
         void compare_files(const string& fileofile);
         bool findMin(const vector<uint64_t>& minims,vector<uint64_t>& min_vector);
         void increment_files(const vector<istream*>& files, const vector<uint64_t>& indices);
