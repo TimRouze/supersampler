@@ -302,11 +302,9 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                             if(not color_map[canon][files.size()]){
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
-                                if(jaccard_only){
-                                    color_map[canon][files.size()]=1;
-                                }else{
-                                    color_map[canon][files.size()]=v_abundances[cpt_abundance];
-                                }
+                                color_map[canon][files.size()]=v_abundances[cpt_abundance];
+                                color_map[canon][files.size()]=1;
+                            
                             }
                         }
                     }
@@ -363,28 +361,18 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
                         color_map[canon].resize(files.size()+1,0);
-                        if(jaccard_only){
-                            color_map[canon][ind]=1;
-                        }else{
-                            color_map[canon][ind]=v_abundances[cpt_abundance];
-                        }
+                        color_map[canon][ind]=v_abundances[cpt_abundance];
+                        
                     }else{ 
                         // On ajoute à la case du fichier l'abondance correspondante.
                         if(not color_map[canon][ind]){
-                            if(jaccard_only){
-                                    color_map[canon][ind]=1;
-                                }else{
-                                    color_map[canon][ind]=v_abundances[cpt_abundance];
-                                }
+                            color_map[canon][ind]=v_abundances[cpt_abundance];
                             // Si c'est au moins la seconde fois qu'on voit ce kmer
                             if(not color_map[canon][files.size()]){
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
-                                if(jaccard_only){
-                                    color_map[canon][ind]=1;
-                                }else{
-                                    color_map[canon][ind]=v_abundances[cpt_abundance];
-                                }
+                                color_map[canon][ind]=v_abundances[cpt_abundance];
+                                color_map[canon][files.size()]=1;
                             }
                         }
                     }
@@ -565,7 +553,9 @@ void Comparator::print_jaccard(const string& outfile){
                 if(score_A.count(i*nb_files+j)==0){
                     out<<"0";
                 }else{
-                    cout<<"Inter:"<<intToString(score_A[i*nb_files+j].second)<<" Union:"<<intToString((nb_kmer_seen_infile[i]+nb_kmer_seen_infile[j]-score_A[i*nb_files+j].second))<<" A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
+                    cout<<"Inter:"<<intToString(score_A[i*nb_files+j].second)<<
+                    " Union:"<<intToString((nb_kmer_seen_infile[i]+nb_kmer_seen_infile[j]-score_A[i*nb_files+j].second))<<
+                    " A:"<<intToString(nb_kmer_seen_infile[i])<<" B:"<<intToString(nb_kmer_seen_infile[j])<<endl;
                     // cout << intToString(abund_tot) << endl;
                     double score = (double)score_A[i*nb_files+j].second/(nb_kmer_seen_infile[i]+nb_kmer_seen_infile[j]-score_A[i*nb_files+j].second);
                     if(score<min_threshold){
