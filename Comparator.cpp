@@ -630,7 +630,7 @@ void Comparator::print_weighted_jaccard(const string& outfile){
                     if(score<min_threshold){
                         out<<'0';
                     }else{
-                        out << setprecision(precision) << (1-(2*acos(score))/3.14159265358979323846);
+                        out << setprecision(precision) << ((double)1-(acosl(score)*2)/acosl(0));
                     }
                 }
             }else{
@@ -641,7 +641,7 @@ void Comparator::print_weighted_jaccard(const string& outfile){
                     if(score<min_threshold){
                         out<<'0';
                     }else{
-                        out << setprecision(precision) << (1-(2*acos(score))/3.14159265358979323846);
+                        out << setprecision(precision) << ((double)1-(acosl(score)*2)/acosl(0));
                     }
                 }
             }
