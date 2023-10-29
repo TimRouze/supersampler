@@ -272,6 +272,8 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                         nb_kmer_seen_infile_ab[ind] += val*val;
                     }
                 }
+            }else{
+                v_abundances.resize(kmers_in_skmer,1);
             }
             while((i + k) <= ref->size()){
                 curr_kmer = str2num(ref->substr(i, k-1));
@@ -283,28 +285,32 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
                         color_map[canon].resize(files.size()+1,0);
-                        if(jaccard_only){
-                            color_map[canon][ind]=1;
-                        }else{
-                            color_map[canon][ind]=v_abundances[cpt_abundance];
-                        }
+                        // if(jaccard_only){
+                        //     color_map[canon][ind]=1;
+                        // }else{
+                        color_map[canon][ind]=v_abundances[cpt_abundance];
+                        // }
                     // Sinon
                     }else{
                         //Si c'est la première fois que l'on voit ce k-mer pour ce fichier
                         if(color_map[canon][ind]==0){
                             // On ajoute à la case du fichier l'abondance correspondante.
-                            if(jaccard_only){
-                                color_map[canon][ind]=1;
-                            }else{
-                                color_map[canon][ind]=v_abundances[cpt_abundance];
-                            }
+                            // if(jaccard_only){
+                            //     color_map[canon][ind]=1;
+                            // }else{
+                            color_map[canon][ind]=v_abundances[cpt_abundance];
+                            // }
                             // Si c'est au moins la seconde fois qu'on voit ce kmer
                             if(not color_map[canon][files.size()]){
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
-                                color_map[canon][files.size()]=v_abundances[cpt_abundance];
-                                color_map[canon][files.size()]=1;
-                            
+                                // if(jaccard_only){
+                                //     color_map[canon][files.size()]=1;
+                                // }else{
+                                color_map[canon][ind]=v_abundances[cpt_abundance];
+                                color_map[canon][files.size()] = 1;
+                                // color_map[canon][files.size()]=1;
+                                // }
                             }
                         }
                     }
@@ -336,7 +342,6 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 if(not jaccard_only){
                     if(super_abundance){
                         uint16_t val(stoi(tmp));
-                        
                         if(log_abundance){
                             val=(uint64_t)1 << val;
                         }
@@ -352,6 +357,8 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                             //abund_tot += stoi(val);
                         }
                     }
+                }else{
+                    v_abundances.resize(skip.size()-k+1,1);
                 }
                 curr_kmer = str2num(skip.substr(0, k-1));
                 while(i+k <= skip.size()){
@@ -361,18 +368,29 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                     if(color_map.count(canon) == 0){
                         // On aggrandi la color map et on ajoute a la case du fichier courant l'abondance du kmer pour ce fichier.
                         color_map[canon].resize(files.size()+1,0);
-                        color_map[canon][ind]=v_abundances[cpt_abundance];
-                        
+                        // if(jaccard_only){
+                        //     color_map[canon][ind]=1;
+                        // }else{
+                            color_map[canon][ind]=v_abundances[cpt_abundance];
+                        // }
                     }else{ 
                         // On ajoute à la case du fichier l'abondance correspondante.
                         if(not color_map[canon][ind]){
-                            color_map[canon][ind]=v_abundances[cpt_abundance];
+                            // if(jaccard_only){
+                            //         color_map[canon][ind]=1;
+                            //     }else{
+                                    color_map[canon][ind]=v_abundances[cpt_abundance];
+                                // }
                             // Si c'est au moins la seconde fois qu'on voit ce kmer
                             if(not color_map[canon][files.size()]){
                                 // On a un match donc on flag le kmer
                                 interesting_hits.push_back(canon);
+                                // if(jaccard_only){
+                                //     color_map[canon][ind]=1;
+                                // }else{
                                 color_map[canon][ind]=v_abundances[cpt_abundance];
-                                color_map[canon][files.size()]=1;
+                                color_map[canon][files.size()] = 1;
+                                // }
                             }
                         }
                     }
@@ -385,6 +403,7 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
     delete ref;
     compute_scores(color_map,interesting_hits);
 }
+
 
 
 void Comparator::compute_scores(const ankerl::unordered_dense::map<kmer,vector<uint32_t> >& color_map,vector<kmer>& interesting_hits){
