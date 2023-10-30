@@ -91,8 +91,6 @@ class Subsampler {
         }
         //~ selection_threshold=-1;
         actual_minimizer_number = 0;
-        kmers_file = (new zstr::ofstream("kmers.fa.gz",21,1));
-        kmers_reconstruct = (new zstr::ofstream("kmers_reconstruct.fa.gz",21,1));
     }
     void parse_fasta(const string& input_file);
     void parse_fasta_test(const string& input_file, const string& prefix);

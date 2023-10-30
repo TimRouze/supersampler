@@ -541,8 +541,8 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 	actual_minimizer_number = minimizer_map.size();
 	delete input_stream;
 	delete out_file_skmer;
-	delete kmers_file;
-	delete kmers_reconstruct;
+	// delete kmers_file;
+	// delete kmers_reconstruct;
 }
 
 
@@ -634,12 +634,12 @@ kmer Subsampler::find_next(kmer start, ankerl::unordered_dense::map<kmer, kmer_i
 				}
 				
 				string k_mer(num2str(next, k) + "\n");
-				kmers_reconstruct->write(header.c_str(), header.size());
-				kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
+				// kmers_reconstruct->write(header.c_str(), header.size());
+				// kmers_reconstruct->write(k_mer.c_str(), k_mer.size());
 				string temp = strCompressor(num2str(next, k)); 
 				k_mer = strDecompressor(&temp) + "\n";
-				kmers_file->write(header.c_str(), header.size());
-				kmers_file->write(k_mer.c_str(), k_mer.size());
+				// kmers_file->write(header.c_str(), header.size());
+				// kmers_file->write(k_mer.c_str(), k_mer.size());
 				seen_unique_kmers_at_reconstruction++;
 				total_kmer_number_at_reconstruction += kmer_map[next].count;
 				return next;
@@ -672,12 +672,12 @@ kmer Subsampler::find_first_kmer(ankerl::unordered_dense::map<kmer, kmer_info> &
 				times_seen.push_back(k_mer.second.count);
 			}
 			string to_write(num2str(k_mer.first, k) + "\n");
-			kmers_reconstruct->write(header.c_str(), header.size());
-			kmers_reconstruct->write(to_write.c_str(), to_write.size());
+			// kmers_reconstruct->write(header.c_str(), header.size());
+			// kmers_reconstruct->write(to_write.c_str(), to_write.size());
 			string temp = strCompressor(num2str(k_mer.first, k)); 
 			to_write = strDecompressor(&temp) + "\n";
-			kmers_file->write(header.c_str(), header.size());
-			kmers_file->write(to_write.c_str(), to_write.size());
+			// kmers_file->write(header.c_str(), header.size());
+			// kmers_file->write(to_write.c_str(), to_write.size());
 			return k_mer.first;
 		}
 	}
