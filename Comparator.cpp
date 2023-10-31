@@ -84,7 +84,6 @@ void Comparator::compare_sketches(uint size_query){
             increment_files(input_files, indices);
         }
     }
-    // cout<<"Comparisons done"<<endl;
     for(uint64_t f = 0; f < input_files.size(); ++f){
         delete input_files[f];
     }
@@ -125,10 +124,12 @@ void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_
         uint32_t size_buffer=0;
         skip->clear();
         files[ind]->read((char*)&size_buffer,sizeof(size_buffer));
-        skip->resize(size_buffer);
-        files[ind]->read(skip->data(),size_buffer);
-        *skip=strDecompressor(skip);
-        *skip=inject_minimizer(skip,strminimizer);
+        if(size_buffer!=0){
+            skip->resize(size_buffer);
+            files[ind]->read(skip->data(),size_buffer);
+            *skip=strDecompressor(skip);
+            *skip=inject_minimizer(skip,strminimizer);
+        }
         
         if (skip->size() < k-m) {
             *skip = "";
@@ -181,6 +182,7 @@ void Comparator::skip_bucket(const vector<istream*>& files, const vector<uint64_
                         }
                         nb_kmer_seen_infile_ab[ind] += ival*ival*(skip1.size()+skip2.size()-k+m+1);//TODO CHECK
                     }else{
+                    
                         while (getline(abundance, val, ' ')) {
                             uint64_t ival=stoi(val);
                             if(log_abundance){
@@ -236,9 +238,11 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
         ref->clear();
         files[ind]->read((char*)&size_buffer,sizeof(size_buffer));
         ref->resize(size_buffer);
-        files[ind]->read(ref->data(),size_buffer);
-        *ref=strDecompressor(ref); 
-        *ref=inject_minimizer(ref,strminimizer);
+        if(size_buffer!=0){
+            files[ind]->read(ref->data(),size_buffer);
+            *ref=strDecompressor(ref); 
+            *ref=inject_minimizer(ref,strminimizer);
+        }
         uint64_t cpt_abundance(0);
         if (ref->size() < k-m){
             *ref = "";
@@ -334,7 +338,6 @@ void Comparator::count_intersection(const vector<istream*>& files, const vector<
                 skip+=strminimizer+skip2;
                 uint64_t i(0);
                 getline(*files[ind], tmp);
-                
                 uint64_t cpt_abundance(0), nb_kmer(0);
                 stringstream abundance(tmp);
                 v_abundances.clear();

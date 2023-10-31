@@ -313,6 +313,17 @@ void smooth(vector<uint16_t>& times_seen){
 
 
 
+bool containsOtherChars(const std::string& str) {
+    for (char c : str) {
+        if (c != 'A' && c != 'C' && c != 'G' && c != 'T') {
+            return true;
+        }
+    }
+    return false;
+}
+
+
+
 
 //  RENAME IN SUBSAMPLE ?
 void Subsampler::parse_fasta_test(const string &input_file, const string &output_prefix){
@@ -511,11 +522,12 @@ void Subsampler::parse_fasta_test(const string &input_file, const string &output
 			else
 			{
 				i += (skmer_str.size() - k + 1);
-				uint64_t p = skmer_str.find(minstr);
+				size_t p = skmer_str.find(minstr);
 				skmers += skmer_str.substr(0, p);
 				skmers += "\n";
 				skmers += skmer_str.substr(p + minimizer_size);
 				skmers += "\n";
+				
 				for(auto &curr_abundance : times_seen){
 					string tmp = to_string(curr_abundance);
 					skmers += tmp+" ";
