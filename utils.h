@@ -74,6 +74,7 @@ vector<string> split(const string& s, char delim);
 bool exists_test(const string& name);
 __m128i mm_bitshift_right(__m128i x, unsigned count);
 uint64_t rcbc(uint64_t in, uint64_t n);
+__uint128_t rcb(const __uint128_t& in, uint64_t n);
 string revComp(const string& s);
 void decompress_file(const string& file, const string& output_file);
 vector<bool> str2boolv(const string& str);

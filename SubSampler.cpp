@@ -113,7 +113,7 @@ uint64_t Subsampler::get_minimizer_stranded(kmer seq, uint64_t &position,uint64_
 uint64_t Subsampler::get_minimizer_multiple(kmer seq, uint64_t &position,bool &is_rev,bool& is_multiple){
 	uint64_t position_st,hashmini_st,hashmini_rc,position_rc;
 	uint64_t mini=get_minimizer_stranded(seq,position_st,hashmini_st);
-	kmer rckmer=rcbc(seq,k);
+	kmer rckmer=rcb(seq,k);
 	uint64_t minirc=get_minimizer_stranded(rckmer,position_rc,hashmini_rc);
 	if(hashmini_st<hashmini_rc){
 		is_rev=false;
